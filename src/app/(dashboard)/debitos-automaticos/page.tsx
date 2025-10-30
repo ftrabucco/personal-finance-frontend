@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { DebitoAutomaticoForm } from '@/components/forms/DebitoAutomaticoForm'
+import { DualCurrencyDisplay } from '@/components/common/DualCurrencyDisplay'
 import {
   useDebitosAutomaticos,
   useCreateDebitoAutomatico,
@@ -90,7 +91,14 @@ export default function DebitosAutomaticosPage() {
   }
 
   const debitosActivos = debitos.filter((d) => d.activo)
-  const totalMensual = debitosActivos.reduce((sum, debito) => sum + debito.monto, 0)
+  const totalARS = debitosActivos.reduce(
+    (sum, debito) => sum + (Number(debito.monto_ars) || 0),
+    0
+  )
+  const totalUSD = debitosActivos.reduce(
+    (sum, debito) => sum + (Number(debito.monto_usd) || 0),
+    0
+  )
 
   return (
     <div className="space-y-6">
@@ -118,10 +126,15 @@ export default function DebitosAutomaticosPage() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(totalMensual)}
+            <div className="space-y-1">
+              <div className="text-2xl font-bold">
+                {formatCurrency(totalARS)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                US$ {Number(totalUSD).toFixed(2)}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-2">
               {debitosActivos.length} débitos activos
             </p>
           </CardContent>
@@ -190,8 +203,13 @@ export default function DebitosAutomaticosPage() {
                     <TableCell className="max-w-xs truncate font-medium">
                       {debito.descripcion}
                     </TableCell>
-                    <TableCell className="font-semibold">
-                      {formatCurrency(debito.monto)}
+                    <TableCell>
+                      <DualCurrencyDisplay
+                        montoArs={debito.monto_ars || 0}
+                        montoUsd={debito.monto_usd || 0}
+                        monedaOrigen={debito.moneda_origen || 'ARS'}
+                        tipoCambio={debito.tipo_cambio_referencia}
+                      />
                     </TableCell>
                     <TableCell>Día {debito.dia_de_pago}</TableCell>
                     <TableCell>{debito.frecuencia?.nombre || '-'}</TableCell>

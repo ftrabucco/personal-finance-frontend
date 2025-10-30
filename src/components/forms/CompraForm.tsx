@@ -23,13 +23,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { CurrencySelector } from '@/components/forms/CurrencySelector'
 import { useCatalogosCompletos } from '@/lib/hooks/useCatalogos'
 import { useTarjetas } from '@/lib/hooks/useTarjetas'
-import type { Compra } from '@/types'
+import { useTipoCambioActual } from '@/lib/hooks/useTipoCambio'
+import { formatCurrency } from '@/lib/utils/formatters'
+import type { Compra, Moneda } from '@/types'
 
 const compraSchema = z.object({
   descripcion: z.string().min(1, 'La descripción es requerida'),
   monto_total: z.number().positive('El monto debe ser mayor a 0'),
+  moneda_origen: z.enum(['ARS', 'USD'], { message: 'La moneda es requerida' }),
   fecha_compra: z.string().min(1, 'La fecha es requerida'),
   cantidad_cuotas: z.number().int().min(1, 'Debe tener al menos 1 cuota'),
   categoria_gasto_id: z.number({ message: 'La categoría es requerida' }),
@@ -56,12 +60,14 @@ export function CompraForm({
   const { categorias, importancias, tiposPago, isLoading: catalogosLoading } =
     useCatalogosCompletos()
   const { data: tarjetasResponse } = useTarjetas()
+  const { data: tipoCambioResponse } = useTipoCambioActual()
 
   const form = useForm<CompraFormValues>({
     resolver: zodResolver(compraSchema),
     defaultValues: {
       descripcion: initialData?.descripcion || '',
       monto_total: initialData?.monto_total || 0,
+      moneda_origen: initialData?.moneda_origen || 'ARS',
       fecha_compra: initialData?.fecha_compra
         ? format(new Date(initialData.fecha_compra), 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd'),
@@ -74,9 +80,21 @@ export function CompraForm({
   })
 
   const tarjetas = tarjetasResponse?.data || []
+  const tipoCambio = tipoCambioResponse?.data
+
   const montoTotal = form.watch('monto_total')
+  const monedaActual = form.watch('moneda_origen')
   const cantidadCuotas = form.watch('cantidad_cuotas')
+
   const montoPorCuota = cantidadCuotas > 0 ? montoTotal / cantidadCuotas : 0
+
+  const montoConvertido = tipoCambio && tipoCambio.valor_venta
+    ? monedaActual === 'ARS'
+      ? montoTotal / Number(tipoCambio.valor_venta)
+      : montoTotal * Number(tipoCambio.valor_venta)
+    : 0
+
+  const cuotaConvertida = cantidadCuotas > 0 ? montoConvertido / cantidadCuotas : 0
 
   if (catalogosLoading) {
     return <div className="text-center py-4">Cargando formulario...</div>
@@ -102,54 +120,92 @@ export function CompraForm({
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="monto_total"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Monto Total (ARS)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    {...field}
-                    onChange={(e) =>
-                      field.onChange(parseFloat(e.target.value) || 0)
-                    }
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        {/* Selector de Moneda */}
+        <FormField
+          control={form.control}
+          name="moneda_origen"
+          render={({ field }) => (
+            <FormItem>
+              <CurrencySelector
+                value={field.value}
+                onChange={field.onChange}
+                label="Moneda"
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <FormField
-            control={form.control}
-            name="cantidad_cuotas"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Cantidad de Cuotas</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="1"
-                    placeholder="1"
-                    {...field}
-                    onChange={(e) =>
-                      field.onChange(parseInt(e.target.value) || 1)
-                    }
-                  />
-                </FormControl>
-                <FormDescription>
-                  Cuota mensual: ${montoPorCuota.toFixed(2)}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        {/* Monto Total */}
+        <FormField
+          control={form.control}
+          name="monto_total"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Monto Total {monedaActual === 'ARS' ? '(ARS)' : '(USD)'}
+              </FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  {...field}
+                  onChange={(e) =>
+                    field.onChange(parseFloat(e.target.value) || 0)
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Preview de conversión */}
+        {tipoCambio && tipoCambio.valor_venta && montoTotal > 0 && montoConvertido > 0 && (
+          <div className="p-3 bg-muted rounded-lg text-sm">
+            <p className="text-muted-foreground mb-1">Conversión estimada:</p>
+            <p className="font-semibold">
+              {monedaActual === 'ARS' ? (
+                <>Total: ≈ US$ {Number(montoConvertido).toFixed(2)}</>
+              ) : (
+                <>Total: ≈ {formatCurrency(montoConvertido)}</>
+              )}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              TC: ${Number(tipoCambio.valor_venta).toFixed(2)}
+            </p>
+          </div>
+        )}
+
+        {/* Cantidad de Cuotas */}
+        <FormField
+          control={form.control}
+          name="cantidad_cuotas"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Cantidad de Cuotas</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="1"
+                  {...field}
+                  onChange={(e) =>
+                    field.onChange(parseInt(e.target.value) || 1)
+                  }
+                />
+              </FormControl>
+              <FormDescription>
+                Cuota mensual:{' '}
+                {monedaActual === 'ARS'
+                  ? `${formatCurrency(montoPorCuota)} (≈ US$ ${cuotaConvertida.toFixed(2)})`
+                  : `US$ ${montoPorCuota.toFixed(2)} (≈ ${formatCurrency(cuotaConvertida)})`}
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

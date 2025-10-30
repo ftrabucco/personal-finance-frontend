@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { GastoRecurrenteForm } from '@/components/forms/GastoRecurrenteForm'
+import { DualCurrencyDisplay } from '@/components/common/DualCurrencyDisplay'
 import {
   useGastosRecurrentes,
   useCreateGastoRecurrente,
@@ -90,7 +91,14 @@ export default function GastosRecurrentesPage() {
   }
 
   const gastosActivos = gastos.filter((g) => g.activo)
-  const totalMensual = gastosActivos.reduce((sum, gasto) => sum + gasto.monto, 0)
+  const totalARS = gastosActivos.reduce(
+    (sum, gasto) => sum + (Number(gasto.monto_ars) || 0),
+    0
+  )
+  const totalUSD = gastosActivos.reduce(
+    (sum, gasto) => sum + (Number(gasto.monto_usd) || 0),
+    0
+  )
 
   return (
     <div className="space-y-6">
@@ -118,10 +126,15 @@ export default function GastosRecurrentesPage() {
             <Repeat className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(totalMensual)}
+            <div className="space-y-1">
+              <div className="text-2xl font-bold">
+                {formatCurrency(totalARS)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                US$ {Number(totalUSD).toFixed(2)}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-2">
               {gastosActivos.length} gastos activos
             </p>
           </CardContent>
@@ -190,8 +203,13 @@ export default function GastosRecurrentesPage() {
                     <TableCell className="max-w-xs truncate font-medium">
                       {gasto.descripcion}
                     </TableCell>
-                    <TableCell className="font-semibold">
-                      {formatCurrency(gasto.monto)}
+                    <TableCell>
+                      <DualCurrencyDisplay
+                        montoArs={gasto.monto_ars || 0}
+                        montoUsd={gasto.monto_usd || 0}
+                        monedaOrigen={gasto.moneda_origen || 'ARS'}
+                        tipoCambio={gasto.tipo_cambio_referencia}
+                      />
                     </TableCell>
                     <TableCell>
                       Día {gasto.dia_de_pago}

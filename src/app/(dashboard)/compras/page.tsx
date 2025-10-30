@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { CompraForm } from '@/components/forms/CompraForm'
+import { DualCurrencyDisplay } from '@/components/common/DualCurrencyDisplay'
 import {
   useCompras,
   useCreateCompra,
@@ -29,6 +30,7 @@ import {
   useDeleteCompra,
 } from '@/lib/hooks/useCompras'
 import { formatCurrency } from '@/lib/utils/formatters'
+import { cleanFormData } from '@/lib/utils/cleanFormData'
 import type { Compra } from '@/types'
 
 export default function ComprasPage() {
@@ -64,13 +66,16 @@ export default function ComprasPage() {
 
   const handleSubmit = async (data: Partial<Compra>) => {
     try {
+      // Filtrar campos calculados por el backend (Joi.forbidden)
+      const cleanData = cleanFormData(data)
+
       if (editingCompra) {
         await updateMutation.mutateAsync({
           id: editingCompra.id,
-          data,
+          data: cleanData,
         })
       } else {
-        await createMutation.mutateAsync(data)
+        await createMutation.mutateAsync(cleanData)
       }
       setIsDialogOpen(false)
       setEditingCompra(null)
@@ -79,7 +84,8 @@ export default function ComprasPage() {
     }
   }
 
-  const totalCompras = compras.reduce((sum, compra) => sum + compra.monto_total, 0)
+  const totalARS = compras.reduce((sum, compra) => sum + (Number(compra.monto_total_ars) || 0), 0)
+  const totalUSD = compras.reduce((sum, compra) => sum + (Number(compra.monto_total_usd) || 0), 0)
   const comprasPendientes = compras.filter((c) => c.pendiente_cuotas).length
 
   return (
@@ -100,18 +106,23 @@ export default function ComprasPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total en Compras
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Total ARS</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(totalCompras)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {compras.length} {compras.length === 1 ? 'compra' : 'compras'}
-            </p>
+            <div className="text-2xl font-bold">{formatCurrency(totalARS)}</div>
+            <p className="text-xs text-muted-foreground">Compras en pesos</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total USD</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">US$ {totalUSD.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Compras en dólares</p>
           </CardContent>
         </Card>
 
@@ -161,7 +172,6 @@ export default function ComprasPage() {
               </TableHeader>
               <TableBody>
                 {compras.map((compra) => {
-                  const montoPorCuota = compra.monto_total / compra.cantidad_cuotas
                   return (
                     <TableRow key={compra.id}>
                       <TableCell>
@@ -173,16 +183,18 @@ export default function ComprasPage() {
                       <TableCell>
                         {compra.categoria?.nombre_categoria || '-'}
                       </TableCell>
-                      <TableCell className="font-semibold">
-                        {formatCurrency(compra.monto_total)}
+                      <TableCell>
+                        <DualCurrencyDisplay
+                          montoArs={compra.monto_total_ars}
+                          montoUsd={compra.monto_total_usd}
+                          monedaOrigen={compra.moneda_origen}
+                          tipoCambio={compra.tipo_cambio_usado}
+                        />
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-medium">
                             {compra.cantidad_cuotas} cuotas
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatCurrency(montoPorCuota)}/mes
                           </span>
                         </div>
                       </TableCell>

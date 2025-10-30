@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { GastoUnicoForm } from '@/components/forms/GastoUnicoForm'
+import { DualCurrencyDisplay } from '@/components/common/DualCurrencyDisplay' // ✨ Import
 import {
   useGastosUnicos,
   useCreateGastoUnico,
@@ -29,6 +30,7 @@ import {
   useDeleteGastoUnico,
 } from '@/lib/hooks/useGastosUnicos'
 import { formatCurrency } from '@/lib/utils/formatters'
+import { cleanFormData } from '@/lib/utils/cleanFormData'
 import type { GastoUnico } from '@/types'
 
 export default function GastosUnicosPage() {
@@ -64,13 +66,16 @@ export default function GastosUnicosPage() {
 
   const handleSubmit = async (data: Partial<GastoUnico>) => {
     try {
+      // Filtrar campos calculados por el backend (Joi.forbidden)
+      const cleanData = cleanFormData(data)
+
       if (editingGasto) {
         await updateMutation.mutateAsync({
           id: editingGasto.id,
-          data,
+          data: cleanData,
         })
       } else {
-        await createMutation.mutateAsync(data)
+        await createMutation.mutateAsync(cleanData)
       }
       setIsDialogOpen(false)
       setEditingGasto(null)
@@ -79,7 +84,9 @@ export default function GastosUnicosPage() {
     }
   }
 
-  const totalGastos = gastos.reduce((sum, gasto) => sum + gasto.monto, 0)
+  // ✨ Totales en ambas monedas
+  const totalARS = gastos.reduce((sum, gasto) => sum + (Number(gasto.monto_ars) || 0), 0)
+  const totalUSD = gastos.reduce((sum, gasto) => sum + (Number(gasto.monto_usd) || 0), 0)
 
   return (
     <div className="space-y-6">
@@ -96,21 +103,41 @@ export default function GastosUnicosPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* ✨ Cards con totales en ambas monedas */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total de Gastos
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Total ARS</CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(totalGastos)}
-            </div>
+            <div className="text-2xl font-bold">{formatCurrency(totalARS)}</div>
             <p className="text-xs text-muted-foreground">
-              {gastos.length} {gastos.length === 1 ? 'gasto' : 'gastos'}{' '}
-              registrado{gastos.length === 1 ? '' : 's'}
+              Gastos en pesos argentinos
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total USD</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">US$ {totalUSD.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Gastos en dólares</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cantidad</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{gastos.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {gastos.length === 1 ? 'gasto registrado' : 'gastos registrados'}
             </p>
           </CardContent>
         </Card>
@@ -149,38 +176,44 @@ export default function GastosUnicosPage() {
                     <TableCell>
                       {format(new Date(gasto.fecha), 'dd/MM/yyyy')}
                     </TableCell>
-                    <TableCell className="max-w-xs truncate">
+                    <TableCell className="max-w-[200px] truncate">
                       {gasto.descripcion}
                     </TableCell>
                     <TableCell>
-                      {gasto.categoria?.nombre_categoria || '-'}
+                      {gasto.categoria?.nombre_categoria || 'Sin categoría'}
                     </TableCell>
-                    <TableCell className="font-semibold">
-                      {formatCurrency(gasto.monto)}
-                    </TableCell>
-                    <TableCell>{gasto.tipoPago?.nombre || '-'}</TableCell>
+                    {/* ✨ Componente DualCurrencyDisplay */}
                     <TableCell>
-                      {gasto.procesado ? (
-                        <Badge variant="success">Procesado</Badge>
-                      ) : (
-                        <Badge variant="warning">Pendiente</Badge>
-                      )}
+                      <DualCurrencyDisplay
+                        montoArs={gasto.monto_ars}
+                        montoUsd={gasto.monto_usd}
+                        monedaOrigen={gasto.moneda_origen}
+                        tipoCambio={gasto.tipo_cambio_usado}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {gasto.tipoPago?.nombre || 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={gasto.procesado ? 'default' : 'secondary'}>
+                        {gasto.procesado ? 'Procesado' : 'Pendiente'}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={() => handleEdit(gasto)}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={() => handleDelete(gasto.id)}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -193,15 +226,15 @@ export default function GastosUnicosPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingGasto ? 'Editar Gasto' : 'Nuevo Gasto Único'}
+              {editingGasto ? 'Editar Gasto Único' : 'Nuevo Gasto Único'}
             </DialogTitle>
             <DialogDescription>
               {editingGasto
                 ? 'Modifica los datos del gasto único'
-                : 'Completa el formulario para registrar un gasto único'}
+                : 'Completa los datos para crear un nuevo gasto único'}
             </DialogDescription>
           </DialogHeader>
           <GastoUnicoForm
