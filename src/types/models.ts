@@ -38,6 +38,10 @@ export interface GastoUnico {
   id: number
   descripcion: string
   monto: number
+  moneda_origen: Moneda
+  monto_ars: number
+  monto_usd: number
+  tipo_cambio_usado: number
   fecha: string
   categoria_gasto_id: number
   importancia_gasto_id: number
@@ -57,6 +61,11 @@ export interface Compra {
   id: number
   descripcion: string
   monto_total: number
+  moneda_origen: Moneda
+  monto_total_ars: number
+  monto_total_usd: number
+  tipo_cambio_usado: number
+  monto_pagado: number
   fecha_compra: string
   cantidad_cuotas: number
   pendiente_cuotas: boolean
@@ -77,6 +86,10 @@ export interface GastoRecurrente {
   id: number
   descripcion: string
   monto: number
+  moneda_origen: Moneda
+  monto_ars: number
+  monto_usd: number
+  tipo_cambio_referencia: number
   dia_de_pago: number
   mes_de_pago: number | null
   activo: boolean
@@ -101,6 +114,10 @@ export interface DebitoAutomatico {
   id: number
   descripcion: string
   monto: number
+  moneda_origen: Moneda
+  monto_ars: number
+  monto_usd: number
+  tipo_cambio_referencia: number
   dia_de_pago: number
   activo: boolean
   ultima_fecha_generado: string | null
@@ -150,5 +167,19 @@ export interface TipoPago {
 
 export interface Frecuencia {
   id: number
-  nombre: string
+  nombre_frecuencia: string
 }
+
+// Tipo de cambio
+export interface TipoCambio {
+  id: number
+  fecha: string // ISO date
+  valor_compra: number
+  valor_venta: number
+  fuente: 'BCRA' | 'DolarAPI' | 'manual'
+  createdAt?: string
+  updatedAt?: string
+}
+
+// Enum para monedas
+export type Moneda = 'ARS' | 'USD'

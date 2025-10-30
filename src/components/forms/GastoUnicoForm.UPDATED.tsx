@@ -3,11 +3,11 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -22,77 +22,75 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useCatalogosCompletos, useFrecuencias } from '@/lib/hooks/useCatalogos'
+import { CurrencySelector } from '@/components/forms/CurrencySelector'
+import { useCatalogosCompletos } from '@/lib/hooks/useCatalogos'
 import { useTarjetas } from '@/lib/hooks/useTarjetas'
 import { useTipoCambioActual } from '@/lib/hooks/useTipoCambio'
-import { CurrencySelector } from '@/components/forms/CurrencySelector'
+import type { GastoUnico, Moneda } from '@/types'
 import { formatCurrency } from '@/lib/utils/formatters'
-import type { DebitoAutomatico, Moneda } from '@/types'
+import { useState, useEffect } from 'react'
 
-const debitoAutomaticoSchema = z.object({
+// ✨ Schema actualizado con moneda_origen
+const gastoUnicoSchema = z.object({
   descripcion: z.string().min(1, 'La descripción es requerida'),
   monto: z.number().positive('El monto debe ser mayor a 0'),
-  dia_de_pago: z.number().int().min(1).max(31, 'Debe estar entre 1 y 31'),
-  activo: z.boolean(),
+  moneda_origen: z.enum(['ARS', 'USD'], { message: 'La moneda es requerida' }),
+  fecha: z.string().min(1, 'La fecha es requerida'),
   categoria_gasto_id: z.number({ message: 'La categoría es requerida' }),
   importancia_gasto_id: z.number({ message: 'La importancia es requerida' }),
   tipo_pago_id: z.number({ message: 'El tipo de pago es requerido' }),
   tarjeta_id: z.number().nullable(),
-  frecuencia_gasto_id: z.number({ message: 'La frecuencia es requerida' }),
-  moneda_origen: z.enum(['ARS', 'USD'], { message: 'La moneda es requerida' }),
 })
 
-type DebitoAutomaticoFormValues = z.infer<typeof debitoAutomaticoSchema>
+type GastoUnicoFormValues = z.infer<typeof gastoUnicoSchema>
 
-interface DebitoAutomaticoFormProps {
-  initialData?: Partial<DebitoAutomatico>
-  onSubmit: (data: DebitoAutomaticoFormValues) => void
+interface GastoUnicoFormProps {
+  initialData?: Partial<GastoUnico>
+  onSubmit: (data: GastoUnicoFormValues) => void
   onCancel: () => void
   isSubmitting?: boolean
 }
 
-export function DebitoAutomaticoForm({
+export function GastoUnicoForm({
   initialData,
   onSubmit,
   onCancel,
   isSubmitting,
-}: DebitoAutomaticoFormProps) {
+}: GastoUnicoFormProps) {
   const { categorias, importancias, tiposPago, isLoading: catalogosLoading } =
     useCatalogosCompletos()
-  const { data: frecuenciasResponse } = useFrecuencias()
   const { data: tarjetasResponse } = useTarjetas()
   const { data: tipoCambioResponse } = useTipoCambioActual()
 
-  const form = useForm<DebitoAutomaticoFormValues>({
-    resolver: zodResolver(debitoAutomaticoSchema),
+  const form = useForm<GastoUnicoFormValues>({
+    resolver: zodResolver(gastoUnicoSchema),
     defaultValues: {
       descripcion: initialData?.descripcion || '',
       monto: initialData?.monto || 0,
-      dia_de_pago: initialData?.dia_de_pago || 1,
-      activo: initialData?.activo ?? true,
+      moneda_origen: initialData?.moneda_origen || 'ARS', // ✨ Default ARS
+      fecha: initialData?.fecha
+        ? format(new Date(initialData.fecha), 'yyyy-MM-dd')
+        : format(new Date(), 'yyyy-MM-dd'),
       categoria_gasto_id: initialData?.categoria_gasto_id,
       importancia_gasto_id: initialData?.importancia_gasto_id,
       tipo_pago_id: initialData?.tipo_pago_id,
       tarjeta_id: initialData?.tarjeta_id || null,
-      frecuencia_gasto_id: initialData?.frecuencia_gasto_id,
-      moneda_origen: (initialData?.moneda_origen as Moneda) || 'ARS',
     },
   })
 
   const tarjetas = tarjetasResponse?.data || []
-  const frecuencias = frecuenciasResponse?.data || []
-
-  // 💱 Multi-currency conversion preview
   const tipoCambio = tipoCambioResponse?.data
+
+  // ✨ Watch para mostrar conversión en tiempo real
   const montoActual = form.watch('monto')
   const monedaActual = form.watch('moneda_origen')
 
-  const montoConvertido =
-    tipoCambio && tipoCambio.valor_venta
-      ? monedaActual === 'ARS'
-        ? montoActual / Number(tipoCambio.valor_venta)
-        : montoActual * Number(tipoCambio.valor_venta)
-      : 0
+  // ✨ Calcular conversión estimada
+  const montoConvertido = tipoCambio
+    ? monedaActual === 'ARS'
+      ? montoActual / tipoCambio.valor_venta
+      : montoActual * tipoCambio.valor_venta
+    : 0
 
   if (catalogosLoading) {
     return <div className="text-center py-4">Cargando formulario...</div>
@@ -108,83 +106,65 @@ export function DebitoAutomaticoForm({
             <FormItem>
               <FormLabel>Descripción</FormLabel>
               <FormControl>
-                <Textarea placeholder="Ej: Netflix Premium" {...field} />
+                <Textarea placeholder="Ej: Compra en supermercado" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="moneda_origen"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Moneda</FormLabel>
-              <FormControl>
+        {/* ✨ Grid con Monto + Moneda */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="monto"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Monto</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* ✨ Preview de conversión */}
+            {tipoCambio && montoActual > 0 && (
+              <div className="p-3 bg-muted rounded-lg text-sm">
+                <p className="text-muted-foreground mb-1">Conversión estimada:</p>
+                <p className="font-semibold">
+                  {monedaActual === 'ARS' ? (
+                    <>≈ US$ {montoConvertido.toFixed(2)}</>
+                  ) : (
+                    <>≈ {formatCurrency(montoConvertido)}</>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  TC: ${tipoCambio.valor_venta.toFixed(2)}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* ✨ Selector de Moneda */}
+          <FormField
+            control={form.control}
+            name="moneda_origen"
+            render={({ field }) => (
+              <FormItem>
                 <CurrencySelector
                   value={field.value}
                   onChange={field.onChange}
+                  label="Moneda"
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="monto"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Monto ({monedaActual})</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    {...field}
-                    onChange={(e) =>
-                      field.onChange(parseFloat(e.target.value) || 0)
-                    }
-                  />
-                </FormControl>
-                {tipoCambio &&
-                  tipoCambio.valor_venta &&
-                  montoActual > 0 &&
-                  montoConvertido > 0 && (
-                    <FormDescription>
-                      ≈{' '}
-                      {monedaActual === 'ARS'
-                        ? `US$ ${Number(montoConvertido).toFixed(2)}`
-                        : formatCurrency(Number(montoConvertido))}
-                    </FormDescription>
-                  )}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="dia_de_pago"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Día de Débito</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="31"
-                    placeholder="1-31"
-                    {...field}
-                    onChange={(e) =>
-                      field.onChange(parseInt(e.target.value) || 1)
-                    }
-                  />
-                </FormControl>
-                <FormDescription>Día del mes en que se debita</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -193,27 +173,13 @@ export function DebitoAutomaticoForm({
 
         <FormField
           control={form.control}
-          name="frecuencia_gasto_id"
+          name="fecha"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Frecuencia</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                value={field.value?.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar frecuencia" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {frecuencias.map((frec) => (
-                    <SelectItem key={frec.id} value={frec.id.toString()}>
-                      {frec.nombre_frecuencia}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormLabel>Fecha</FormLabel>
+              <FormControl>
+                <Input type="date" {...field} />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -329,28 +295,6 @@ export function DebitoAutomaticoForm({
                   ))}
                 </SelectContent>
               </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="activo"
-          render={({ field }) => (
-            <FormItem className="flex items-center gap-2">
-              <FormControl>
-                <input
-                  type="checkbox"
-                  checked={field.value}
-                  onChange={field.onChange}
-                  className="h-4 w-4"
-                />
-              </FormControl>
-              <FormLabel className="!mt-0">Activo</FormLabel>
-              <FormDescription className="!mt-0 ml-auto">
-                Solo los débitos activos generarán gastos automáticos
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

@@ -23,13 +23,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { CurrencySelector } from '@/components/forms/CurrencySelector'
 import { useCatalogosCompletos, useFrecuencias } from '@/lib/hooks/useCatalogos'
 import { useTarjetas } from '@/lib/hooks/useTarjetas'
-import type { GastoRecurrente } from '@/types'
+import { useTipoCambioActual } from '@/lib/hooks/useTipoCambio'
+import type { GastoRecurrente, Moneda } from '@/types'
+import { formatCurrency } from '@/lib/utils/formatters'
 
 const gastoRecurrenteSchema = z.object({
   descripcion: z.string().min(1, 'La descripción es requerida'),
   monto: z.number().positive('El monto debe ser mayor a 0'),
+  moneda_origen: z.enum(['ARS', 'USD'], { message: 'La moneda es requerida' }),
   dia_de_pago: z.number().int().min(1).max(31, 'Debe estar entre 1 y 31'),
   mes_de_pago: z.number().int().min(1).max(12).nullable(),
   activo: z.boolean(),
@@ -60,12 +64,14 @@ export function GastoRecurrenteForm({
     useCatalogosCompletos()
   const { data: frecuenciasResponse } = useFrecuencias()
   const { data: tarjetasResponse } = useTarjetas()
+  const { data: tipoCambioResponse } = useTipoCambioActual()
 
   const form = useForm<GastoRecurrenteFormValues>({
     resolver: zodResolver(gastoRecurrenteSchema),
     defaultValues: {
       descripcion: initialData?.descripcion || '',
       monto: initialData?.monto || 0,
+      moneda_origen: initialData?.moneda_origen || 'ARS',
       dia_de_pago: initialData?.dia_de_pago || 1,
       mes_de_pago: initialData?.mes_de_pago || null,
       activo: initialData?.activo ?? true,
@@ -82,6 +88,18 @@ export function GastoRecurrenteForm({
 
   const tarjetas = tarjetasResponse?.data || []
   const frecuencias = frecuenciasResponse?.data || []
+  const tipoCambio = tipoCambioResponse?.data
+
+  // Watch para calcular conversión en tiempo real
+  const montoActual = form.watch('monto')
+  const monedaActual = form.watch('moneda_origen')
+
+  // Calcular el monto convertido (para preview)
+  const montoConvertido = tipoCambio && tipoCambio.valor_venta
+    ? monedaActual === 'ARS'
+      ? montoActual / Number(tipoCambio.valor_venta)
+      : montoActual * Number(tipoCambio.valor_venta)
+    : 0
 
   if (catalogosLoading) {
     return <div className="text-center py-4">Cargando formulario...</div>
@@ -104,29 +122,62 @@ export function GastoRecurrenteForm({
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="monto"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Monto (ARS)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    {...field}
-                    onChange={(e) =>
-                      field.onChange(parseFloat(e.target.value) || 0)
-                    }
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <FormField
+          control={form.control}
+          name="moneda_origen"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Moneda</FormLabel>
+              <FormControl>
+                <CurrencySelector
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
+        <FormField
+          control={form.control}
+          name="monto"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Monto ({monedaActual})</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  {...field}
+                  onChange={(e) =>
+                    field.onChange(parseFloat(e.target.value) || 0)
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {tipoCambio && tipoCambio.valor_venta && montoActual > 0 && montoConvertido > 0 && (
+          <div className="p-3 bg-muted rounded-lg text-sm">
+            <p className="text-muted-foreground mb-1">Conversión estimada:</p>
+            <p className="font-semibold">
+              {monedaActual === 'ARS' ? (
+                <>≈ US$ {Number(montoConvertido).toFixed(2)}</>
+              ) : (
+                <>≈ {formatCurrency(montoConvertido)}</>
+              )}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Tipo de cambio: ${Number(tipoCambio.valor_venta).toFixed(2)}
+            </p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="dia_de_pago"

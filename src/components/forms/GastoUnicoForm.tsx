@@ -22,13 +22,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { CurrencySelector } from '@/components/forms/CurrencySelector'
 import { useCatalogosCompletos } from '@/lib/hooks/useCatalogos'
 import { useTarjetas } from '@/lib/hooks/useTarjetas'
-import type { GastoUnico } from '@/types'
+import { useTipoCambioActual } from '@/lib/hooks/useTipoCambio'
+import type { GastoUnico, Moneda } from '@/types'
+import { formatCurrency } from '@/lib/utils/formatters'
 
+// ✨ Schema: usuario ingresa monto + moneda_origen
 const gastoUnicoSchema = z.object({
   descripcion: z.string().min(1, 'La descripción es requerida'),
   monto: z.number().positive('El monto debe ser mayor a 0'),
+  moneda_origen: z.enum(['ARS', 'USD'], { message: 'La moneda es requerida' }),
   fecha: z.string().min(1, 'La fecha es requerida'),
   categoria_gasto_id: z.number({ message: 'La categoría es requerida' }),
   importancia_gasto_id: z.number({ message: 'La importancia es requerida' }),
@@ -54,12 +59,14 @@ export function GastoUnicoForm({
   const { categorias, importancias, tiposPago, isLoading: catalogosLoading } =
     useCatalogosCompletos()
   const { data: tarjetasResponse } = useTarjetas()
+  const { data: tipoCambioResponse } = useTipoCambioActual()
 
   const form = useForm<GastoUnicoFormValues>({
     resolver: zodResolver(gastoUnicoSchema),
     defaultValues: {
       descripcion: initialData?.descripcion || '',
       monto: initialData?.monto || 0,
+      moneda_origen: initialData?.moneda_origen || 'ARS', // ✨ Default ARS
       fecha: initialData?.fecha
         ? format(new Date(initialData.fecha), 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd'),
@@ -71,6 +78,18 @@ export function GastoUnicoForm({
   })
 
   const tarjetas = tarjetasResponse?.data || []
+  const tipoCambio = tipoCambioResponse?.data
+
+  // ✨ Watch para calcular conversión en tiempo real
+  const montoActual = form.watch('monto')
+  const monedaActual = form.watch('moneda_origen')
+
+  // ✨ Calcular el monto convertido (para preview)
+  const montoConvertido = tipoCambio && tipoCambio.valor_venta
+    ? monedaActual === 'ARS'
+      ? montoActual / Number(tipoCambio.valor_venta)  // ARS → USD
+      : montoActual * Number(tipoCambio.valor_venta)  // USD → ARS
+    : 0
 
   if (catalogosLoading) {
     return <div className="text-center py-4">Cargando formulario...</div>
@@ -86,9 +105,45 @@ export function GastoUnicoForm({
             <FormItem>
               <FormLabel>Descripción</FormLabel>
               <FormControl>
-                <Textarea
-                  placeholder="Ej: Compra en supermercado"
+                <Textarea placeholder="Ej: Compra en supermercado" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* ✨ Selector de Moneda PRIMERO */}
+        <FormField
+          control={form.control}
+          name="moneda_origen"
+          render={({ field }) => (
+            <FormItem>
+              <CurrencySelector
+                value={field.value}
+                onChange={field.onChange}
+                label="Moneda"
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* ✨ Campo Monto con label dinámico según moneda */}
+        <FormField
+          control={form.control}
+          name="monto"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Monto {monedaActual === 'ARS' ? '(ARS)' : '(USD)'}
+              </FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
                   {...field}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                 />
               </FormControl>
               <FormMessage />
@@ -96,43 +151,36 @@ export function GastoUnicoForm({
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="monto"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Monto (ARS)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    {...field}
-                    onChange={(e) =>
-                      field.onChange(parseFloat(e.target.value) || 0)
-                    }
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        {/* ✨ Preview de conversión */}
+        {tipoCambio && tipoCambio.valor_venta && montoActual > 0 && montoConvertido > 0 && (
+          <div className="p-3 bg-muted rounded-lg text-sm">
+            <p className="text-muted-foreground mb-1">Conversión estimada:</p>
+            <p className="font-semibold">
+              {monedaActual === 'ARS' ? (
+                <>≈ US$ {Number(montoConvertido).toFixed(2)}</>
+              ) : (
+                <>≈ {formatCurrency(montoConvertido)}</>
+              )}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Tipo de cambio: ${Number(tipoCambio.valor_venta).toFixed(2)}
+            </p>
+          </div>
+        )}
 
-          <FormField
-            control={form.control}
-            name="fecha"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Fecha</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="fecha"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Fecha</FormLabel>
+              <FormControl>
+                <Input type="date" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
