@@ -17,12 +17,15 @@ import {
   Repeat,
   Receipt,
   Plus,
+  RefreshCw,
 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { useTarjetas } from '@/lib/hooks/useTarjetas'
 import { useAllGastos } from '@/lib/hooks/useGastos'
 import { useCompras } from '@/lib/hooks/useCompras'
 import { useGastosRecurrentes } from '@/lib/hooks/useGastosRecurrentes'
 import { useDebitosAutomaticos } from '@/lib/hooks/useDebitosAutomaticos'
+import { useProcesarTodosPendientes } from '@/lib/hooks/useProcesamiento'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 
@@ -34,12 +37,17 @@ export default function DashboardPage() {
   const { data: comprasResponse } = useCompras()
   const { data: gastosRecurrentesResponse } = useGastosRecurrentes()
   const { data: debitosResponse } = useDebitosAutomaticos()
+  const procesarPendientes = useProcesarTodosPendientes()
 
   const tarjetas = tarjetasResponse?.data || []
   const gastos = gastosResponse?.data || []
   const compras = comprasResponse?.data || []
   const gastosRecurrentes = gastosRecurrentesResponse?.data || []
   const debitos = debitosResponse?.data || []
+
+  const handleProcesarPendientes = () => {
+    procesarPendientes.mutate()
+  }
 
   // Calcular gastos del mes actual
   const now = new Date()
@@ -63,11 +71,23 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Welcome */}
-      <div>
-        <h1 className="text-3xl font-bold">Bienvenido, {user?.nombre}!</h1>
-        <p className="text-muted-foreground">
-          Aquí está el resumen de tus finanzas personales
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Bienvenido, {user?.nombre}!</h1>
+          <p className="text-muted-foreground">
+            Aquí está el resumen de tus finanzas personales
+          </p>
+        </div>
+        <Button
+          onClick={handleProcesarPendientes}
+          disabled={procesarPendientes.isPending}
+          variant="outline"
+          size="sm"
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${procesarPendientes.isPending ? 'animate-spin' : ''}`} />
+          {procesarPendientes.isPending ? 'Procesando...' : 'Procesar Pendientes'}
+        </Button>
       </div>
 
       {/* Stats Cards */}
