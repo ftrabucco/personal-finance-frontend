@@ -9,13 +9,30 @@ export function useProcesarTodosPendientes() {
   return useMutation({
     mutationFn: procesamientoApi.procesarTodosPendientes,
     onSuccess: (data) => {
+      // Log para debug
+      console.log('Respuesta del backend:', data)
+
       const result = data.data
 
-      // Mostrar toast con resumen
-      toast.success('Procesamiento completado', {
-        description: `Se generaron ${result.totalGastosGenerados} gastos: ${result.gastosRecurrentesProcesados} recurrentes, ${result.comprasesProcesadas} cuotas, ${result.debitosProcesados} débitos`,
-        duration: 5000,
-      })
+      // Verificar si tenemos datos válidos
+      if (!result) {
+        toast.success('Procesamiento completado', {
+          description: 'Se ejecutó el procesamiento de gastos pendientes',
+          duration: 5000,
+        })
+      } else {
+        // Intentar extraer los valores de forma segura
+        const totalGastos = result.totalGastosGenerados || result.total || 0
+        const recurrentes = result.gastosRecurrentesProcesados || result.recurrentes || 0
+        const cuotas = result.comprasesProcesadas || result.compras || 0
+        const debitos = result.debitosProcesados || result.debitos || 0
+
+        // Mostrar toast con resumen
+        toast.success('Procesamiento completado', {
+          description: `Se generaron ${totalGastos} gastos: ${recurrentes} recurrentes, ${cuotas} cuotas, ${debitos} débitos`,
+          duration: 5000,
+        })
+      }
 
       // Invalidar queries para refrescar datos
       queryClient.invalidateQueries({ queryKey: ['gastos'] })
@@ -24,6 +41,7 @@ export function useProcesarTodosPendientes() {
       queryClient.invalidateQueries({ queryKey: ['debitos-automaticos'] })
     },
     onError: (error: any) => {
+      console.error('Error al procesar:', error)
       toast.error('Error al procesar gastos pendientes', {
         description: error.response?.data?.message || error.message || 'Error desconocido',
       })

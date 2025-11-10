@@ -28,9 +28,10 @@ export interface ProcesamientoResult {
 
 export const procesamientoApi = {
   // Procesar todos los gastos pendientes (recurrentes, compras, débitos)
+  // El backend usa GET /gastos/generate
   procesarTodosPendientes: async () => {
-    const { data } = await apiClient.post<StandardResponse<ProcesamientoResult>>(
-      '/procesamiento/procesar-pendientes'
+    const { data } = await apiClient.get<StandardResponse<ProcesamientoResult>>(
+      '/gastos/generate'
     )
     return data
   },
