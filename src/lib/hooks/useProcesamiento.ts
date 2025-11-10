@@ -13,23 +13,41 @@ export function useProcesarTodosPendientes() {
       console.log('Respuesta del backend:', data)
 
       const result = data.data
+      const summary = result?.summary
+      const details = result?.details
 
-      // Verificar si tenemos datos válidos
-      if (!result) {
+      // Extraer información del resumen
+      const totalGenerados = summary?.total_generated || 0
+      const totalErrores = summary?.total_errors || 0
+      const breakdown = summary?.breakdown || {}
+
+      // Contar por tipo
+      const recurrentes = breakdown.gastos_recurrentes?.generated || 0
+      const cuotas = breakdown.compras?.generated || 0
+      const debitos = breakdown.debitos_automaticos?.generated || 0
+
+      // Mostrar toast con resumen
+      if (totalGenerados > 0 || totalErrores > 0) {
+        const successMsg = totalGenerados > 0
+          ? `✅ ${totalGenerados} gastos generados: ${recurrentes} recurrentes, ${cuotas} cuotas, ${debitos} débitos`
+          : 'No hay gastos pendientes para procesar'
+
+        const errorMsg = totalErrores > 0
+          ? `\n⚠️ ${totalErrores} errores al procesar`
+          : ''
+
         toast.success('Procesamiento completado', {
-          description: 'Se ejecutó el procesamiento de gastos pendientes',
+          description: successMsg + errorMsg,
           duration: 5000,
         })
-      } else {
-        // Intentar extraer los valores de forma segura
-        const totalGastos = result.totalGastosGenerados || result.total || 0
-        const recurrentes = result.gastosRecurrentesProcesados || result.recurrentes || 0
-        const cuotas = result.comprasesProcesadas || result.compras || 0
-        const debitos = result.debitosProcesados || result.debitos || 0
 
-        // Mostrar toast con resumen
+        // Si hay errores, mostrarlos en consola para debug
+        if (totalErrores > 0 && details?.errors) {
+          console.warn('Errores durante el procesamiento:', details.errors)
+        }
+      } else {
         toast.success('Procesamiento completado', {
-          description: `Se generaron ${totalGastos} gastos: ${recurrentes} recurrentes, ${cuotas} cuotas, ${debitos} débitos`,
+          description: 'No hay gastos pendientes para generar',
           duration: 5000,
         })
       }

@@ -3,25 +3,39 @@ import { apiClient } from '../client'
 import type { StandardResponse } from '@/types'
 
 export interface ProcesamientoResult {
-  gastosRecurrentesProcesados: number
-  comprasesProcesadas: number
-  debitosProcesados: number
-  totalGastosGenerados: number
-  detalles: {
-    gastosRecurrentes: Array<{
+  summary: {
+    total_generated: number
+    total_errors: number
+    breakdown: {
+      gastos_recurrentes?: {
+        generated: number
+        errors: number
+      }
+      compras?: {
+        generated: number
+        errors: number
+      }
+      debitos_automaticos?: {
+        generated: number
+        errors: number
+      }
+    }
+    type: string
+  }
+  details: {
+    success: Array<{
+      type: string
       id: number
       descripcion: string
-      gastoGeneradoId: number
+      gasto_id: number
+      timestamp: string
     }>
-    compras: Array<{
+    errors: Array<{
+      type: string
       id: number
+      error: string
       descripcion: string
-      gastoGeneradoId: number
-    }>
-    debitos: Array<{
-      id: number
-      descripcion: string
-      gastoGeneradoId: number
+      timestamp: string
     }>
   }
 }
