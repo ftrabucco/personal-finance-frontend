@@ -26,6 +26,19 @@ export function useProcesarTodosPendientes() {
       const cuotas = breakdown.compras?.generated || 0
       const debitos = breakdown.debitos_automaticos?.generated || 0
 
+      // Log detallado del breakdown
+      console.log('📊 Breakdown completo:', {
+        total_generated: totalGenerados,
+        total_errors: totalErrores,
+        gastos_recurrentes: breakdown.gastos_recurrentes,
+        compras: breakdown.compras,
+        debitos_automaticos: breakdown.debitos_automaticos,
+      })
+
+      // Log de éxitos y errores
+      console.log('✅ Gastos generados exitosamente:', details?.success)
+      console.log('❌ Errores encontrados:', details?.errors)
+
       // Mostrar toast con resumen
       if (totalGenerados > 0 || totalErrores > 0) {
         const successMsg = totalGenerados > 0
