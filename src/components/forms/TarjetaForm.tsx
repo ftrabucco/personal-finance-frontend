@@ -28,6 +28,12 @@ const tarjetaSchema = z.object({
     message: 'El tipo es requerido',
   }),
   banco: z.string().min(1, 'El banco es requerido'),
+  ultimos_4_digitos: z.string()
+    .length(4, 'Debe tener exactamente 4 dígitos')
+    .regex(/^\d{4}$/, 'Solo se permiten números')
+    .nullable()
+    .optional()
+    .or(z.literal('')),
   dia_mes_cierre: z.number().min(1).max(31).nullable(),
   dia_mes_vencimiento: z.number().min(1).max(31).nullable(),
   permite_cuotas: z.boolean(),
@@ -54,6 +60,7 @@ export function TarjetaForm({
       nombre: initialData?.nombre || '',
       tipo: initialData?.tipo || 'debito',
       banco: initialData?.banco || '',
+      ultimos_4_digitos: initialData?.ultimos_4_digitos || '',
       dia_mes_cierre: initialData?.dia_mes_cierre || null,
       dia_mes_vencimiento: initialData?.dia_mes_vencimiento || null,
       permite_cuotas: initialData?.permite_cuotas || false,
@@ -110,6 +117,29 @@ export function TarjetaForm({
               <FormLabel>Banco</FormLabel>
               <FormControl>
                 <Input placeholder="Ej: Santander" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="ultimos_4_digitos"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Últimos 4 dígitos (opcional)</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="1234"
+                  maxLength={4}
+                  {...field}
+                  value={field.value || ''}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 4)
+                    field.onChange(value)
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

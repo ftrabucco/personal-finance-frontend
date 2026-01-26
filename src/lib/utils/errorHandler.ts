@@ -135,16 +135,26 @@ export function handleApiError(error: unknown, context?: Record<string, unknown>
     errorType = classification.type
     severity = classification.severity
 
-    const apiError = error.response?.data as StandardError | ValidationError
+    const apiError = error.response?.data as StandardError | ValidationError | { message?: string; errors?: string[] }
 
-    // Errores de validación
-    if (apiError && 'details' in apiError && Array.isArray(apiError.details)) {
+    // Errores con array de errores (formato del backend)
+    if (apiError && 'errors' in apiError && Array.isArray(apiError.errors)) {
+      message = apiError.errors.join(', ')
+      errorType = ErrorType.VALIDATION
+      severity = ErrorSeverity.LOW
+    }
+    // Errores de validación con details
+    else if (apiError && 'details' in apiError && Array.isArray(apiError.details)) {
       message = apiError.details.map((d) => d.message).join(', ')
       errorType = ErrorType.VALIDATION
       severity = ErrorSeverity.LOW
     }
+    // Error con mensaje directo
+    else if (apiError && 'message' in apiError && apiError.message) {
+      message = apiError.message
+    }
     // Error estándar
-    else if (apiError?.error) {
+    else if (apiError && 'error' in apiError && apiError.error) {
       message = apiError.error
     }
     // Error de red

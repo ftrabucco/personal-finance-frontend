@@ -141,6 +141,7 @@ export interface Tarjeta {
   nombre: string
   tipo: 'debito' | 'credito' | 'virtual'
   banco: string
+  ultimos_4_digitos: string | null
   dia_mes_cierre: number | null
   dia_mes_vencimiento: number | null
   permite_cuotas: boolean

@@ -137,6 +137,11 @@ export default function TarjetasPage() {
                   <TableRow key={tarjeta.id}>
                     <TableCell className="font-medium">
                       {tarjeta.nombre}
+                      {tarjeta.ultimos_4_digitos && (
+                        <span className="ml-2 text-muted-foreground">
+                          ****{tarjeta.ultimos_4_digitos}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={getTipoBadgeVariant(tarjeta.tipo)}>

@@ -23,7 +23,11 @@ export const registerSchema = z.object({
   password: z
     .string()
     .min(6, 'La contraseña debe tener al menos 6 caracteres')
-    .max(50, 'La contraseña no puede superar los 50 caracteres'),
+    .max(50, 'La contraseña no puede superar los 50 caracteres')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      'La contraseña debe tener al menos una mayúscula, una minúscula y un número'
+    ),
   confirmPassword: z
     .string()
     .min(1, 'Debe confirmar la contraseña'),

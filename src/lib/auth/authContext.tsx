@@ -13,6 +13,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>
   register: (nombre: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  refreshUser: () => Promise<void>
   isAuthenticated: boolean
 }
 
@@ -105,6 +106,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const refreshUser = async () => {
+    try {
+      const response = await authApi.getProfile()
+      const updatedUser = response.data
+
+      // Actualizar localStorage y estado
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+      setUser(updatedUser)
+    } catch (error) {
+      console.error('Error al refrescar usuario:', error)
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -114,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        refreshUser,
         isAuthenticated: !!token && !!user,
       }}
     >
