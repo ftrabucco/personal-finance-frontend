@@ -87,8 +87,9 @@ export function useProcesarGastosRecurrentes() {
     mutationFn: procesamientoApi.procesarGastosRecurrentes,
     onSuccess: (data) => {
       const result = data.data
+      const generated = result?.summary?.breakdown?.gastos_recurrentes?.generated || 0
       toast.success('Gastos recurrentes procesados', {
-        description: `Se procesaron ${result.gastosRecurrentesProcesados} gastos recurrentes`,
+        description: `Se procesaron ${generated} gastos recurrentes`,
       })
       queryClient.invalidateQueries({ queryKey: ['gastos'] })
       queryClient.invalidateQueries({ queryKey: ['gastos-recurrentes'] })
@@ -108,8 +109,9 @@ export function useProcesarCompras() {
     mutationFn: procesamientoApi.procesarCompras,
     onSuccess: (data) => {
       const result = data.data
+      const generated = result?.summary?.breakdown?.compras?.generated || 0
       toast.success('Cuotas procesadas', {
-        description: `Se procesaron ${result.comprasesProcesadas} cuotas de compras`,
+        description: `Se procesaron ${generated} cuotas de compras`,
       })
       queryClient.invalidateQueries({ queryKey: ['gastos'] })
       queryClient.invalidateQueries({ queryKey: ['compras'] })
@@ -129,8 +131,9 @@ export function useProcesarDebitos() {
     mutationFn: procesamientoApi.procesarDebitos,
     onSuccess: (data) => {
       const result = data.data
+      const generated = result?.summary?.breakdown?.debitos_automaticos?.generated || 0
       toast.success('Débitos procesados', {
-        description: `Se procesaron ${result.debitosProcesados} débitos automáticos`,
+        description: `Se procesaron ${generated} débitos automáticos`,
       })
       queryClient.invalidateQueries({ queryKey: ['gastos'] })
       queryClient.invalidateQueries({ queryKey: ['debitos-automaticos'] })

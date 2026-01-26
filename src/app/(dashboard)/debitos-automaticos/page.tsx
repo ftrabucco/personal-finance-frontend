@@ -212,7 +212,7 @@ export default function DebitosAutomaticosPage() {
                       />
                     </TableCell>
                     <TableCell>Día {debito.dia_de_pago}</TableCell>
-                    <TableCell>{debito.frecuencia?.nombre || '-'}</TableCell>
+                    <TableCell>{debito.frecuencia?.nombre_frecuencia || '-'}</TableCell>
                     <TableCell>
                       {debito.categoria?.nombre_categoria || '-'}
                     </TableCell>

@@ -50,7 +50,6 @@ export const debitosAutomaticosApi = {
       descripcion: debito.descripcion,
       monto: debito.monto,
       dia_de_pago: debito.dia_de_pago,
-      mes_de_pago: debito.mes_de_pago,
       categoria_gasto_id: debito.categoria_gasto_id,
       importancia_gasto_id: debito.importancia_gasto_id,
       tipo_pago_id: debito.tipo_pago_id,

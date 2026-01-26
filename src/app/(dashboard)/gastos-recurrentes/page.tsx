@@ -215,7 +215,7 @@ export default function GastosRecurrentesPage() {
                       Día {gasto.dia_de_pago}
                       {gasto.mes_de_pago && ` (mes ${gasto.mes_de_pago})`}
                     </TableCell>
-                    <TableCell>{gasto.frecuencia?.nombre || '-'}</TableCell>
+                    <TableCell>{gasto.frecuencia?.nombre_frecuencia || '-'}</TableCell>
                     <TableCell>
                       {gasto.categoria?.nombre_categoria || '-'}
                     </TableCell>
