@@ -42,8 +42,8 @@ export const tipoCambioApi = {
   // Crear tipo de cambio manualmente
   create: async (payload: {
     fecha: string
-    valor_compra: number
-    valor_venta: number
+    valor_compra_usd_ars: number
+    valor_venta_usd_ars: number
     fuente?: string
   }) => {
     const { data } = await apiClient.post<StandardResponse<TipoCambio>>('/tipo-cambio', payload)

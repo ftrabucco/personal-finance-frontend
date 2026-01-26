@@ -85,10 +85,10 @@ export function GastoUnicoForm({
   const monedaActual = form.watch('moneda_origen')
 
   // ✨ Calcular el monto convertido (para preview)
-  const montoConvertido = tipoCambio && tipoCambio.valor_venta
+  const montoConvertido = tipoCambio && tipoCambio.valor_venta_usd_ars
     ? monedaActual === 'ARS'
-      ? montoActual / Number(tipoCambio.valor_venta)  // ARS → USD
-      : montoActual * Number(tipoCambio.valor_venta)  // USD → ARS
+      ? montoActual / Number(tipoCambio.valor_venta_usd_ars)  // ARS → USD
+      : montoActual * Number(tipoCambio.valor_venta_usd_ars)  // USD → ARS
     : 0
 
   if (catalogosLoading) {
@@ -152,7 +152,7 @@ export function GastoUnicoForm({
         />
 
         {/* ✨ Preview de conversión */}
-        {tipoCambio && tipoCambio.valor_venta && montoActual > 0 && montoConvertido > 0 && (
+        {tipoCambio && tipoCambio.valor_venta_usd_ars && montoActual > 0 && montoConvertido > 0 && (
           <div className="p-3 bg-muted rounded-lg text-sm">
             <p className="text-muted-foreground mb-1">Conversión estimada:</p>
             <p className="font-semibold">
@@ -163,7 +163,7 @@ export function GastoUnicoForm({
               )}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Tipo de cambio: ${Number(tipoCambio.valor_venta).toFixed(2)}
+              Tipo de cambio: ${Number(tipoCambio.valor_venta_usd_ars).toFixed(2)}
             </p>
           </div>
         )}

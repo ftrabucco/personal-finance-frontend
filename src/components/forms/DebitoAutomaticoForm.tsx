@@ -88,10 +88,10 @@ export function DebitoAutomaticoForm({
   const monedaActual = form.watch('moneda_origen')
 
   const montoConvertido =
-    tipoCambio && tipoCambio.valor_venta
+    tipoCambio && tipoCambio.valor_venta_usd_ars
       ? monedaActual === 'ARS'
-        ? montoActual / Number(tipoCambio.valor_venta)
-        : montoActual * Number(tipoCambio.valor_venta)
+        ? montoActual / Number(tipoCambio.valor_venta_usd_ars)
+        : montoActual * Number(tipoCambio.valor_venta_usd_ars)
       : 0
 
   if (catalogosLoading) {
@@ -151,7 +151,7 @@ export function DebitoAutomaticoForm({
                   />
                 </FormControl>
                 {tipoCambio &&
-                  tipoCambio.valor_venta &&
+                  tipoCambio.valor_venta_usd_ars &&
                   montoActual > 0 &&
                   montoConvertido > 0 && (
                     <FormDescription>

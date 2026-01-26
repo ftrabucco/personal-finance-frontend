@@ -11,13 +11,13 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
-  Wallet,
   CreditCard,
   ShoppingCart,
   Repeat,
   Receipt,
   Plus,
   RefreshCw,
+  DollarSign,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTarjetas } from '@/lib/hooks/useTarjetas'
@@ -26,6 +26,7 @@ import { useCompras } from '@/lib/hooks/useCompras'
 import { useGastosRecurrentes } from '@/lib/hooks/useGastosRecurrentes'
 import { useDebitosAutomaticos } from '@/lib/hooks/useDebitosAutomaticos'
 import { useProcesarTodosPendientes } from '@/lib/hooks/useProcesamiento'
+import { useTipoCambioActual, useActualizarTipoCambio } from '@/lib/hooks/useTipoCambio'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 
@@ -38,6 +39,8 @@ export default function DashboardPage() {
   const { data: gastosRecurrentesResponse } = useGastosRecurrentes()
   const { data: debitosResponse } = useDebitosAutomaticos()
   const procesarPendientes = useProcesarTodosPendientes()
+  const { data: tipoCambioResponse, isError: tipoCambioError } = useTipoCambioActual()
+  const actualizarTipoCambio = useActualizarTipoCambio()
 
   const tarjetas = tarjetasResponse?.data || []
   const gastos = gastosResponse?.data || []
@@ -48,6 +51,12 @@ export default function DashboardPage() {
   const handleProcesarPendientes = () => {
     procesarPendientes.mutate()
   }
+
+  const handleActualizarTipoCambio = () => {
+    actualizarTipoCambio.mutate()
+  }
+
+  const tipoCambio = tipoCambioResponse?.data
 
   // Calcular gastos del mes actual
   const now = new Date()
@@ -70,6 +79,64 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Exchange Rate Alert */}
+      {(tipoCambioError || !tipoCambio) && (
+        <Card className="border-orange-500 bg-orange-50 dark:bg-orange-950">
+          <CardContent className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-3">
+              <DollarSign className="h-5 w-5 text-orange-600" />
+              <div>
+                <p className="font-medium text-orange-800 dark:text-orange-200">
+                  Tipo de cambio no configurado
+                </p>
+                <p className="text-sm text-orange-600 dark:text-orange-300">
+                  Para registrar gastos en USD necesitas cargar el tipo de cambio
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleActualizarTipoCambio}
+              disabled={actualizarTipoCambio.isPending}
+              variant="outline"
+              size="sm"
+              className="gap-2 border-orange-500 text-orange-700 hover:bg-orange-100"
+            >
+              <RefreshCw className={`h-4 w-4 ${actualizarTipoCambio.isPending ? 'animate-spin' : ''}`} />
+              {actualizarTipoCambio.isPending ? 'Actualizando...' : 'Cargar Tipo de Cambio'}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Exchange Rate Info (when available) */}
+      {tipoCambio && !tipoCambioError && (
+        <Card className="border-green-500 bg-green-50 dark:bg-green-950">
+          <CardContent className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-3">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="font-medium text-green-800 dark:text-green-200">
+                  Tipo de cambio: ${tipoCambio.valor_venta_usd_ars?.toLocaleString('es-AR')} ARS/USD
+                </p>
+                <p className="text-sm text-green-600 dark:text-green-300">
+                  Fuente: {tipoCambio.fuente} - Actualizado: {tipoCambio.fecha}
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleActualizarTipoCambio}
+              disabled={actualizarTipoCambio.isPending}
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${actualizarTipoCambio.isPending ? 'animate-spin' : ''}`} />
+              Actualizar
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Welcome */}
       <div className="flex items-start justify-between">
         <div>

@@ -173,11 +173,13 @@ export interface Frecuencia {
 
 // Tipo de cambio
 export interface TipoCambio {
-  id: number
+  id?: number
   fecha: string // ISO date
-  valor_compra: number
-  valor_venta: number
-  fuente: 'BCRA' | 'DolarAPI' | 'manual'
+  valor_compra_usd_ars: number
+  valor_venta_usd_ars: number
+  fuente: 'BCRA' | 'DolarAPI' | 'manual' | string
+  activo?: boolean
+  ultima_actualizacion?: string
   createdAt?: string
   updatedAt?: string
 }

@@ -88,10 +88,10 @@ export function CompraForm({
 
   const montoPorCuota = cantidadCuotas > 0 ? montoTotal / cantidadCuotas : 0
 
-  const montoConvertido = tipoCambio && tipoCambio.valor_venta
+  const montoConvertido = tipoCambio && tipoCambio.valor_venta_usd_ars
     ? monedaActual === 'ARS'
-      ? montoTotal / Number(tipoCambio.valor_venta)
-      : montoTotal * Number(tipoCambio.valor_venta)
+      ? montoTotal / Number(tipoCambio.valor_venta_usd_ars)
+      : montoTotal * Number(tipoCambio.valor_venta_usd_ars)
     : 0
 
   const cuotaConvertida = cantidadCuotas > 0 ? montoConvertido / cantidadCuotas : 0
@@ -162,7 +162,7 @@ export function CompraForm({
         />
 
         {/* Preview de conversión */}
-        {tipoCambio && tipoCambio.valor_venta && montoTotal > 0 && montoConvertido > 0 && (
+        {tipoCambio && tipoCambio.valor_venta_usd_ars && montoTotal > 0 && montoConvertido > 0 && (
           <div className="p-3 bg-muted rounded-lg text-sm">
             <p className="text-muted-foreground mb-1">Conversión estimada:</p>
             <p className="font-semibold">
@@ -173,7 +173,7 @@ export function CompraForm({
               )}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              TC: ${Number(tipoCambio.valor_venta).toFixed(2)}
+              TC: ${Number(tipoCambio.valor_venta_usd_ars).toFixed(2)}
             </p>
           </div>
         )}

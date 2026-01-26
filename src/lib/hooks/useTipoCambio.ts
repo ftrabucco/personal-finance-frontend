@@ -44,7 +44,7 @@ export function useActualizarTipoCambio() {
       queryClient.invalidateQueries({ queryKey: ['tipo-cambio'] })
       showSuccessToast(
         'Tipo de cambio actualizado',
-        `Fuente: ${data.data.fuente} - $${data.data.tipoCambio.valor_venta}`
+        `Fuente: ${data.data.fuente} - $${data.data.tipoCambio.valor_venta_usd_ars}`
       )
     },
     onError: (error) => {
