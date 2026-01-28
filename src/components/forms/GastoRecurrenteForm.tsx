@@ -149,11 +149,19 @@ export function GastoRecurrenteForm({
                 <Input
                   type="number"
                   step="0.01"
+                  min="0"
                   placeholder="0.00"
-                  {...field}
-                  onChange={(e) =>
-                    field.onChange(parseFloat(e.target.value) || 0)
-                  }
+                  value={field.value || ''}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    field.onChange(value === '' ? 0 : parseFloat(value))
+                  }}
+                  onFocus={(e) => {
+                    // Si el valor es 0, limpiar el input al hacer focus
+                    if (field.value === 0) {
+                      e.target.value = ''
+                    }
+                  }}
                 />
               </FormControl>
               <FormMessage />
