@@ -1,128 +1,122 @@
 // src/lib/hooks/useCatalogos.ts
 import { useQuery } from '@tanstack/react-query'
+import { apiClient } from '@/lib/api/client'
 import type { Categoria, Importancia, TipoPago, Frecuencia } from '@/types'
 
-// Catálogos hardcodeados (el backend no tiene endpoints para estos)
-// Los valores están tomados directamente de la base de datos
-const CATEGORIAS: Categoria[] = [
-  { id: 1, nombre_categoria: 'Alquiler' },
-  { id: 2, nombre_categoria: 'Expensas' },
-  { id: 3, nombre_categoria: 'Servicios (luz, gas, agua)' },
-  { id: 4, nombre_categoria: 'Internet / Cable' },
-  { id: 5, nombre_categoria: 'Hogar / Mantenimiento' },
-  { id: 6, nombre_categoria: 'Supermercado' },
-  { id: 7, nombre_categoria: 'Almacén / Verdulería' },
-  { id: 8, nombre_categoria: 'Delivery / Comida' },
-  { id: 9, nombre_categoria: 'Restaurantes' },
-  { id: 10, nombre_categoria: 'Transporte público' },
-  { id: 11, nombre_categoria: 'Combustible' },
-  { id: 12, nombre_categoria: 'Uber / Taxi' },
-  { id: 13, nombre_categoria: 'Mantenimiento vehículo' },
-  { id: 14, nombre_categoria: 'Farmacia' },
-  { id: 15, nombre_categoria: 'Médicos / Consultas' },
-  { id: 16, nombre_categoria: 'Obra social / Prepaga' },
-  { id: 17, nombre_categoria: 'Peluquería / Estética' },
-  { id: 18, nombre_categoria: 'Ropa / Calzado' },
-  { id: 19, nombre_categoria: 'Gimnasio / Deportes' },
-  { id: 20, nombre_categoria: 'Streaming / Suscripciones' },
-  { id: 21, nombre_categoria: 'Cine / Teatro' },
-  { id: 22, nombre_categoria: 'Libros / Cursos' },
-  { id: 23, nombre_categoria: 'Hobbies' },
-  { id: 24, nombre_categoria: 'Tarjetas de crédito' },
-  { id: 25, nombre_categoria: 'Préstamos' },
-  { id: 26, nombre_categoria: 'Seguros' },
-  { id: 27, nombre_categoria: 'Impuestos' },
-  { id: 28, nombre_categoria: 'Regalos' },
-  { id: 29, nombre_categoria: 'Salidas con amigos' },
-  { id: 30, nombre_categoria: 'Familia' },
-  { id: 31, nombre_categoria: 'Veterinario' },
-  { id: 32, nombre_categoria: 'Comida mascotas' },
-  { id: 33, nombre_categoria: 'Ahorro / Inversión' },
-  { id: 34, nombre_categoria: 'Emergencias' },
-  { id: 35, nombre_categoria: 'Otros' },
-]
+// Types for API response
+interface CatalogosResponse {
+  success: boolean
+  data: {
+    categorias: Categoria[]
+    importancias: Importancia[]
+    tiposPago: TipoPago[]
+    frecuencias: Frecuencia[]
+  }
+}
 
-const IMPORTANCIAS: Importancia[] = [
-  { id: 1, nombre_importancia: 'Esencial' },
-  { id: 2, nombre_importancia: 'Importante' },
-  { id: 3, nombre_importancia: 'Nice to have' },
-  { id: 4, nombre_importancia: 'Prescindible' },
-  { id: 5, nombre_importancia: 'No debería' },
-]
+interface SingleCatalogResponse<T> {
+  success: boolean
+  data: T[]
+}
 
-const TIPOS_PAGO: TipoPago[] = [
-  { id: 1, nombre: 'Efectivo', permite_cuotas: false },
-  { id: 2, nombre: 'Débito', permite_cuotas: false },
-  { id: 3, nombre: 'Crédito', permite_cuotas: true },
-  { id: 4, nombre: 'Transferencia', permite_cuotas: false },
-  { id: 5, nombre: 'MercadoPago', permite_cuotas: false },
-  { id: 6, nombre: 'Cheque', permite_cuotas: false },
-]
+// Fetch all catalogs in a single request (more efficient)
+async function fetchAllCatalogos(): Promise<CatalogosResponse['data']> {
+  const response = await apiClient.get<CatalogosResponse>('/catalogos')
+  return response.data.data
+}
 
-const FRECUENCIAS: Frecuencia[] = [
-  { id: 1, nombre_frecuencia: 'Único' },
-  { id: 2, nombre_frecuencia: 'Diario' },
-  { id: 3, nombre_frecuencia: 'Semanal' },
-  { id: 4, nombre_frecuencia: 'Mensual' },
-  { id: 5, nombre_frecuencia: 'Bimestral' },
-  { id: 6, nombre_frecuencia: 'Trimestral' },
-  { id: 7, nombre_frecuencia: 'Semestral' },
-  { id: 8, nombre_frecuencia: 'Anual' },
-]
+// Individual fetch functions
+async function fetchCategorias(): Promise<Categoria[]> {
+  const response = await apiClient.get<SingleCatalogResponse<Categoria>>('/catalogos/categorias')
+  return response.data.data
+}
+
+async function fetchImportancias(): Promise<Importancia[]> {
+  const response = await apiClient.get<SingleCatalogResponse<Importancia>>('/catalogos/importancias')
+  return response.data.data
+}
+
+async function fetchTiposPago(): Promise<TipoPago[]> {
+  const response = await apiClient.get<SingleCatalogResponse<TipoPago>>('/catalogos/tipos-pago')
+  return response.data.data
+}
+
+async function fetchFrecuencias(): Promise<Frecuencia[]> {
+  const response = await apiClient.get<SingleCatalogResponse<Frecuencia>>('/catalogos/frecuencias')
+  return response.data.data
+}
 
 export function useCategorias() {
   return useQuery({
-    queryKey: ['categorias'],
-    queryFn: async () => ({ data: CATEGORIAS }),
-    staleTime: Infinity, // No cambiarán nunca
+    queryKey: ['catalogos', 'categorias'],
+    queryFn: fetchCategorias,
+    staleTime: 1000 * 60 * 60, // 1 hour - catalogs don't change often
+    gcTime: 1000 * 60 * 60 * 24, // 24 hours cache
+    select: (data) => ({ data }),
   })
 }
 
 export function useImportancias() {
   return useQuery({
-    queryKey: ['importancias'],
-    queryFn: async () => ({ data: IMPORTANCIAS }),
-    staleTime: Infinity,
+    queryKey: ['catalogos', 'importancias'],
+    queryFn: fetchImportancias,
+    staleTime: 1000 * 60 * 60,
+    gcTime: 1000 * 60 * 60 * 24,
+    select: (data) => ({ data }),
   })
 }
 
 export function useTiposPago() {
   return useQuery({
-    queryKey: ['tipos-pago'],
-    queryFn: async () => ({ data: TIPOS_PAGO }),
-    staleTime: Infinity,
+    queryKey: ['catalogos', 'tipos-pago'],
+    queryFn: fetchTiposPago,
+    staleTime: 1000 * 60 * 60,
+    gcTime: 1000 * 60 * 60 * 24,
+    select: (data) => ({ data }),
   })
 }
 
 export function useFrecuencias() {
   return useQuery({
-    queryKey: ['frecuencias'],
-    queryFn: async () => ({ data: FRECUENCIAS }),
-    staleTime: Infinity,
+    queryKey: ['catalogos', 'frecuencias'],
+    queryFn: fetchFrecuencias,
+    staleTime: 1000 * 60 * 60,
+    gcTime: 1000 * 60 * 60 * 24,
+    select: (data) => ({ data }),
   })
 }
 
-// Hook combinado para cargar todos los catálogos de una vez
+// Hook combinado para cargar todos los catálogos de una vez (más eficiente)
 export function useCatalogosCompletos() {
-  const categorias = useCategorias()
-  const importancias = useImportancias()
-  const tiposPago = useTiposPago()
-  const frecuencias = useFrecuencias()
+  const query = useQuery({
+    queryKey: ['catalogos', 'all'],
+    queryFn: fetchAllCatalogos,
+    staleTime: 1000 * 60 * 60, // 1 hour
+    gcTime: 1000 * 60 * 60 * 24, // 24 hours
+  })
 
   return {
-    categorias,
-    importancias,
-    tiposPago,
-    frecuencias,
-    isLoading:
-      categorias.isLoading ||
-      importancias.isLoading ||
-      tiposPago.isLoading ||
-      frecuencias.isLoading,
-    isError:
-      categorias.isError ||
-      importancias.isError ||
-      tiposPago.isError ||
-      frecuencias.isError,
+    categorias: {
+      data: query.data ? { data: query.data.categorias } : undefined,
+      isLoading: query.isLoading,
+      isError: query.isError,
+    },
+    importancias: {
+      data: query.data ? { data: query.data.importancias } : undefined,
+      isLoading: query.isLoading,
+      isError: query.isError,
+    },
+    tiposPago: {
+      data: query.data ? { data: query.data.tiposPago } : undefined,
+      isLoading: query.isLoading,
+      isError: query.isError,
+    },
+    frecuencias: {
+      data: query.data ? { data: query.data.frecuencias } : undefined,
+      isLoading: query.isLoading,
+      isError: query.isError,
+    },
+    isLoading: query.isLoading,
+    isError: query.isError,
   }
 }
