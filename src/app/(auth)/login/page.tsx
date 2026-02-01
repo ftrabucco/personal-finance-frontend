@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth/authContext'
 import { loginSchema, type LoginFormData } from '@/lib/validations/authSchema'
 import { handleApiError } from '@/lib/utils/errorHandler'
@@ -28,6 +29,8 @@ import {
 
 export default function LoginPage() {
   const { login } = useAuth()
+  const searchParams = useSearchParams()
+  const justRegistered = searchParams.get('registered') === 'true'
   const [error, setError] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -65,6 +68,11 @@ export default function LoginPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {justRegistered && (
+                <div className="bg-green-50 text-green-700 text-sm p-3 rounded-md border border-green-200">
+                  Cuenta creada exitosamente. Inicia sesion para continuar.
+                </div>
+              )}
               {error && (
                 <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
                   {error}

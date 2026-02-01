@@ -67,24 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const register = async (nombre: string, email: string, password: string) => {
-    try {
-      const response = await authApi.register(nombre, email, password)
-      const { token, user } = response.data
-
-      // Guardar en localStorage
-      localStorage.setItem('token', token)
-      localStorage.setItem('user', JSON.stringify(user))
-
-      // Guardar token en cookie para el middleware
-      document.cookie = `token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
-
-      setToken(token)
-      setUser(user)
-
-      router.push('/')
-    } catch (error) {
-      throw error
-    }
+    await authApi.register(nombre, email, password)
+    router.push('/login?registered=true')
   }
 
   const logout = async () => {
