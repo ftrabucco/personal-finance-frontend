@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
@@ -27,7 +27,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 
-export default function LoginPage() {
+function LoginForm() {
   const { login } = useAuth()
   const searchParams = useSearchParams()
   const justRegistered = searchParams.get('registered') === 'true'
@@ -136,5 +136,13 @@ export default function LoginPage() {
         </CardFooter>
       </Card>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }
