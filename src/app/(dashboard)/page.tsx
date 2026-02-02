@@ -140,7 +140,7 @@ export default function DashboardPage() {
       {/* Welcome */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Bienvenido, {user?.nombre}!</h1>
+          <h1 className="text-3xl font-bold">Hola, {user?.nombre}!</h1>
           <p className="text-muted-foreground">
             Aquí está el resumen de tus finanzas personales
           </p>
