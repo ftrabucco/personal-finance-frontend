@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = async () => {
     try {
       const response = await authApi.getProfile()
-      const updatedUser = response.data
+      const updatedUser = response.data.user
 
       // Actualizar localStorage y estado
       localStorage.setItem('user', JSON.stringify(updatedUser))

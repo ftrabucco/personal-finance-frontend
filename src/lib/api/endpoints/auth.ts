@@ -20,12 +20,12 @@ export const authApi = {
   },
 
   getProfile: async () => {
-    const { data } = await apiClient.get<StandardResponse<User>>('/auth/profile')
+    const { data } = await apiClient.get<StandardResponse<{ user: User }>>('/auth/profile')
     return data
   },
 
   updateProfile: async (updates: Partial<User>) => {
-    const { data } = await apiClient.put<StandardResponse<User>>('/auth/profile', updates)
+    const { data } = await apiClient.put<StandardResponse<{ user: User }>>('/auth/profile', updates)
     return data
   },
 
