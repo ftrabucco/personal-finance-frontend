@@ -4,30 +4,21 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
-import { Button } from '@/components/ui/button'
+import { Form } from '@/components/ui/form'
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { CurrencySelector } from '@/components/forms/CurrencySelector'
+  DescripcionField,
+  MontoConMonedaField,
+  CategoriaField,
+  ImportanciaField,
+  TipoPagoField,
+  TarjetaField,
+  FechaField,
+  CantidadCuotasField,
+  FormActions,
+} from '@/components/forms/fields'
 import { useCatalogosCompletos } from '@/lib/hooks/useCatalogos'
 import { useTarjetas } from '@/lib/hooks/useTarjetas'
 import { useTipoCambioActual } from '@/lib/hooks/useTipoCambio'
-import { formatCurrency } from '@/lib/utils/formatters'
 import type { Compra, Moneda } from '@/types'
 
 const compraSchema = z.object({
@@ -67,7 +58,7 @@ export function CompraForm({
     defaultValues: {
       descripcion: initialData?.descripcion || '',
       monto_total: initialData?.monto_total || 0,
-      moneda_origen: initialData?.moneda_origen || 'ARS',
+      moneda_origen: (initialData?.moneda_origen as Moneda) || 'ARS',
       fecha_compra: initialData?.fecha_compra
         ? format(new Date(initialData.fecha_compra), 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd'),
@@ -103,259 +94,64 @@ export function CompraForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
+        <DescripcionField
           control={form.control}
           name="descripcion"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Descripción</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Ej: Notebook Lenovo"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          placeholder="Ej: Notebook Lenovo"
         />
 
-        {/* Selector de Moneda */}
-        <FormField
+        <MontoConMonedaField
           control={form.control}
-          name="moneda_origen"
-          render={({ field }) => (
-            <FormItem>
-              <CurrencySelector
-                value={field.value}
-                onChange={field.onChange}
-                label="Moneda"
-              />
-              <FormMessage />
-            </FormItem>
-          )}
+          montoName="monto_total"
+          monedaName="moneda_origen"
+          monedaActual={monedaActual}
+          tipoCambio={tipoCambio}
+          montoActual={montoTotal}
+          label="Monto Total"
         />
 
-        {/* Monto Total */}
-        <FormField
-          control={form.control}
-          name="monto_total"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Monto Total {monedaActual === 'ARS' ? '(ARS)' : '(USD)'}
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={field.value || ''}
-                  onChange={(e) => {
-                    const value = e.target.value
-                    field.onChange(value === '' ? 0 : parseFloat(value))
-                  }}
-                  onFocus={(e) => {
-                    if (field.value === 0) {
-                      e.target.value = ''
-                    }
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Preview de conversión */}
-        {tipoCambio && tipoCambio.valor_venta_usd_ars && montoTotal > 0 && montoConvertido > 0 && (
-          <div className="p-3 bg-muted rounded-lg text-sm">
-            <p className="text-muted-foreground mb-1">Conversión estimada:</p>
-            <p className="font-semibold">
-              {monedaActual === 'ARS' ? (
-                <>Total: ≈ US$ {Number(montoConvertido).toFixed(2)}</>
-              ) : (
-                <>Total: ≈ {formatCurrency(montoConvertido)}</>
-              )}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              TC: ${Number(tipoCambio.valor_venta_usd_ars).toFixed(2)}
-            </p>
-          </div>
-        )}
-
-        {/* Cantidad de Cuotas */}
-        <FormField
+        <CantidadCuotasField
           control={form.control}
           name="cantidad_cuotas"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Cantidad de Cuotas</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  min="1"
-                  placeholder="1"
-                  {...field}
-                  onChange={(e) =>
-                    field.onChange(parseInt(e.target.value) || 1)
-                  }
-                />
-              </FormControl>
-              <FormDescription>
-                Cuota mensual:{' '}
-                {monedaActual === 'ARS'
-                  ? `${formatCurrency(montoPorCuota)} (≈ US$ ${cuotaConvertida.toFixed(2)})`
-                  : `US$ ${montoPorCuota.toFixed(2)} (≈ ${formatCurrency(cuotaConvertida)})`}
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
+          montoPorCuota={montoPorCuota}
+          cuotaConvertida={cuotaConvertida}
+          monedaActual={monedaActual}
         />
 
-        <FormField
+        <FechaField
           control={form.control}
           name="fecha_compra"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Fecha de Compra</FormLabel>
-              <FormControl>
-                <Input type="date" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          label="Fecha de Compra"
         />
 
-        <FormField
+        <CategoriaField
           control={form.control}
           name="categoria_gasto_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Categoría</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                value={field.value?.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar categoría" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {categorias.data?.data.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id.toString()}>
-                      {cat.nombre_categoria}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          categorias={categorias.data?.data || []}
         />
 
-        <FormField
+        <ImportanciaField
           control={form.control}
           name="importancia_gasto_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Importancia</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                value={field.value?.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar importancia" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {importancias.data?.data.map((imp) => (
-                    <SelectItem key={imp.id} value={imp.id.toString()}>
-                      {imp.nombre_importancia}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          importancias={importancias.data?.data || []}
         />
 
-        <FormField
+        <TipoPagoField
           control={form.control}
           name="tipo_pago_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tipo de Pago</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                value={field.value?.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar tipo de pago" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {tiposPago.data?.data.map((tipo) => (
-                    <SelectItem key={tipo.id} value={tipo.id.toString()}>
-                      {tipo.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          tiposPago={tiposPago.data?.data || []}
         />
 
-        <FormField
+        <TarjetaField
           control={form.control}
           name="tarjeta_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tarjeta</FormLabel>
-              <Select
-                onValueChange={(value) =>
-                  field.onChange(value === 'null' ? null : parseInt(value))
-                }
-                value={field.value?.toString() || 'null'}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sin tarjeta" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="null">Sin tarjeta</SelectItem>
-                  {tarjetas
-                    .filter((t) => t.permite_cuotas)
-                    .map((tarjeta) => (
-                      <SelectItem key={tarjeta.id} value={tarjeta.id.toString()}>
-                        {tarjeta.nombre}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <FormDescription>
-                Solo se muestran tarjetas que permiten cuotas
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
+          tarjetas={tarjetas}
+          label="Tarjeta"
+          description="Solo se muestran tarjetas que permiten cuotas"
+          filterCuotas={true}
         />
 
-        <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Guardando...' : 'Guardar'}
-          </Button>
-        </div>
+        <FormActions onCancel={onCancel} isSubmitting={isSubmitting} />
       </form>
     </Form>
   )

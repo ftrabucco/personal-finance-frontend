@@ -3,30 +3,22 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Button } from '@/components/ui/button'
+import { Form } from '@/components/ui/form'
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  DescripcionField,
+  MontoConMonedaField,
+  CategoriaField,
+  ImportanciaField,
+  TipoPagoField,
+  TarjetaField,
+  DiaDePagoField,
+  FrecuenciaField,
+  ActivoField,
+  FormActions,
+} from '@/components/forms/fields'
 import { useCatalogosCompletos, useFrecuencias } from '@/lib/hooks/useCatalogos'
 import { useTarjetas } from '@/lib/hooks/useTarjetas'
 import { useTipoCambioActual } from '@/lib/hooks/useTipoCambio'
-import { CurrencySelector } from '@/components/forms/CurrencySelector'
-import { formatCurrency } from '@/lib/utils/formatters'
 import type { DebitoAutomatico, Moneda } from '@/types'
 
 const debitoAutomaticoSchema = z.object({
@@ -81,18 +73,10 @@ export function DebitoAutomaticoForm({
 
   const tarjetas = tarjetasResponse?.data || []
   const frecuencias = frecuenciasResponse?.data || []
-
-  // 💱 Multi-currency conversion preview
   const tipoCambio = tipoCambioResponse?.data
+
   const montoActual = form.watch('monto')
   const monedaActual = form.watch('moneda_origen')
-
-  const montoConvertido =
-    tipoCambio && tipoCambio.valor_venta_usd_ars
-      ? monedaActual === 'ARS'
-        ? montoActual / Number(tipoCambio.valor_venta_usd_ars)
-        : montoActual * Number(tipoCambio.valor_venta_usd_ars)
-      : 0
 
   if (catalogosLoading) {
     return <div className="text-center py-4">Cargando formulario...</div>
@@ -101,276 +85,65 @@ export function DebitoAutomaticoForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
+        <DescripcionField
           control={form.control}
           name="descripcion"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Descripción</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Ej: Netflix Premium" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          placeholder="Ej: Netflix Premium"
         />
 
-        <FormField
+        <MontoConMonedaField
           control={form.control}
-          name="moneda_origen"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Moneda</FormLabel>
-              <FormControl>
-                <CurrencySelector
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          montoName="monto"
+          monedaName="moneda_origen"
+          monedaActual={monedaActual}
+          tipoCambio={tipoCambio}
+          montoActual={montoActual}
         />
 
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="monto"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Monto ({monedaActual})</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    value={field.value || ''}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      field.onChange(value === '' ? 0 : parseFloat(value))
-                    }}
-                    onFocus={(e) => {
-                      if (field.value === 0) {
-                        e.target.value = ''
-                      }
-                    }}
-                  />
-                </FormControl>
-                {tipoCambio &&
-                  tipoCambio.valor_venta_usd_ars &&
-                  montoActual > 0 &&
-                  montoConvertido > 0 && (
-                    <FormDescription>
-                      ≈{' '}
-                      {monedaActual === 'ARS'
-                        ? `US$ ${Number(montoConvertido).toFixed(2)}`
-                        : formatCurrency(Number(montoConvertido))}
-                    </FormDescription>
-                  )}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <DiaDePagoField
+          control={form.control}
+          name="dia_de_pago"
+          label="Día de Débito"
+          description="Día del mes en que se debita"
+        />
 
-          <FormField
-            control={form.control}
-            name="dia_de_pago"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Día de Débito</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="31"
-                    placeholder="1-31"
-                    {...field}
-                    onChange={(e) =>
-                      field.onChange(parseInt(e.target.value) || 1)
-                    }
-                  />
-                </FormControl>
-                <FormDescription>Día del mes en que se debita</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
+        <FrecuenciaField
           control={form.control}
           name="frecuencia_gasto_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Frecuencia</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                value={field.value?.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar frecuencia" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {frecuencias.map((frec) => (
-                    <SelectItem key={frec.id} value={frec.id.toString()}>
-                      {frec.nombre_frecuencia}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          frecuencias={frecuencias}
         />
 
-        <FormField
+        <CategoriaField
           control={form.control}
           name="categoria_gasto_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Categoría</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                value={field.value?.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar categoría" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {categorias.data?.data.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id.toString()}>
-                      {cat.nombre_categoria}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          categorias={categorias.data?.data || []}
         />
 
-        <FormField
+        <ImportanciaField
           control={form.control}
           name="importancia_gasto_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Importancia</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                value={field.value?.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar importancia" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {importancias.data?.data.map((imp) => (
-                    <SelectItem key={imp.id} value={imp.id.toString()}>
-                      {imp.nombre_importancia}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          importancias={importancias.data?.data || []}
         />
 
-        <FormField
+        <TipoPagoField
           control={form.control}
           name="tipo_pago_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tipo de Pago</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(parseInt(value))}
-                value={field.value?.toString()}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar tipo de pago" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {tiposPago.data?.data.map((tipo) => (
-                    <SelectItem key={tipo.id} value={tipo.id.toString()}>
-                      {tipo.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          tiposPago={tiposPago.data?.data || []}
         />
 
-        <FormField
+        <TarjetaField
           control={form.control}
           name="tarjeta_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tarjeta (Opcional)</FormLabel>
-              <Select
-                onValueChange={(value) =>
-                  field.onChange(value === 'null' ? null : parseInt(value))
-                }
-                value={field.value?.toString() || 'null'}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sin tarjeta" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="null">Sin tarjeta</SelectItem>
-                  {tarjetas.map((tarjeta) => (
-                    <SelectItem key={tarjeta.id} value={tarjeta.id.toString()}>
-                      {tarjeta.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
+          tarjetas={tarjetas}
         />
 
-        <FormField
+        <ActivoField
           control={form.control}
           name="activo"
-          render={({ field }) => (
-            <FormItem className="flex items-center gap-2">
-              <FormControl>
-                <input
-                  type="checkbox"
-                  checked={field.value}
-                  onChange={field.onChange}
-                  className="h-4 w-4"
-                />
-              </FormControl>
-              <FormLabel className="!mt-0">Activo</FormLabel>
-              <FormDescription className="!mt-0 ml-auto">
-                Solo los débitos activos generarán gastos automáticos
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
+          description="Solo los débitos activos generarán gastos automáticos"
         />
 
-        <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Guardando...' : 'Guardar'}
-          </Button>
-        </div>
+        <FormActions onCancel={onCancel} isSubmitting={isSubmitting} />
       </form>
     </Form>
   )
