@@ -103,39 +103,39 @@ export default function GastosUnicosPage() {
         </Button>
       </div>
 
-      {/* ✨ Cards con totales en ambas monedas */}
+      {/* Cards con totales en ambas monedas */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total ARS</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
+            <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalARS)}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalARS)}>{formatCurrency(totalARS)}</div>
             <p className="text-xs text-muted-foreground">
               Gastos en pesos argentinos
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total USD</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
+            <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">US$ {totalUSD.toFixed(2)}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={`US$ ${totalUSD.toFixed(2)}`}>US$ {totalUSD.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Gastos en dólares</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Cantidad</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
+            <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{gastos.length}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{gastos.length}</div>
             <p className="text-xs text-muted-foreground">
               {gastos.length === 1 ? 'gasto registrado' : 'gastos registrados'}
             </p>

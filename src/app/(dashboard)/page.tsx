@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useAuth } from '@/lib/auth/authContext'
 import Link from 'next/link'
 import {
@@ -18,6 +19,9 @@ import {
   Plus,
   RefreshCw,
   DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTarjetas } from '@/lib/hooks/useTarjetas'
@@ -28,7 +32,21 @@ import { useDebitosAutomaticos } from '@/lib/hooks/useDebitosAutomaticos'
 import { useProcesarTodosPendientes } from '@/lib/hooks/useProcesamiento'
 import { useTipoCambioActual, useActualizarTipoCambio } from '@/lib/hooks/useTipoCambio'
 import { formatCurrency } from '@/lib/utils/formatters'
-import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
+import { es } from 'date-fns/locale'
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from 'recharts'
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d', '#ffc658', '#ff7300']
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -58,24 +76,109 @@ export default function DashboardPage() {
 
   const tipoCambio = tipoCambioResponse?.data
 
-  // Calcular gastos del mes actual
+  // Calcular gastos del mes actual y anterior
   const now = new Date()
   const startOfCurrentMonth = startOfMonth(now)
   const endOfCurrentMonth = endOfMonth(now)
+  const startOfLastMonth = startOfMonth(subMonths(now, 1))
+  const endOfLastMonth = endOfMonth(subMonths(now, 1))
 
-  const gastosDelMes = gastos.filter((gasto) => {
-    const fecha = new Date(gasto.fecha)
-    return fecha >= startOfCurrentMonth && fecha <= endOfCurrentMonth
-  })
+  const gastosDelMes = useMemo(() =>
+    gastos.filter((gasto) => {
+      const fecha = new Date(gasto.fecha)
+      return fecha >= startOfCurrentMonth && fecha <= endOfCurrentMonth
+    }),
+    [gastos, startOfCurrentMonth, endOfCurrentMonth]
+  )
+
+  const gastosDelMesAnterior = useMemo(() =>
+    gastos.filter((gasto) => {
+      const fecha = new Date(gasto.fecha)
+      return fecha >= startOfLastMonth && fecha <= endOfLastMonth
+    }),
+    [gastos, startOfLastMonth, endOfLastMonth]
+  )
 
   const totalGastosDelMes = gastosDelMes.reduce(
     (sum, gasto) => sum + parseFloat(gasto.monto_ars),
     0
   )
 
+  const totalGastosDelMesAnterior = gastosDelMesAnterior.reduce(
+    (sum, gasto) => sum + parseFloat(gasto.monto_ars),
+    0
+  )
+
+  // Calcular diferencia porcentual
+  const diferenciaPorcentual = totalGastosDelMesAnterior > 0
+    ? ((totalGastosDelMes - totalGastosDelMesAnterior) / totalGastosDelMesAnterior) * 100
+    : 0
+
+  // Gastos por categoría del mes actual
+  const gastosPorCategoria = useMemo(() => {
+    const categoriaMap = new Map<string, number>()
+
+    gastosDelMes.forEach((gasto) => {
+      const categoria = gasto.categoria?.nombre_categoria || 'Sin categoría'
+      const actual = categoriaMap.get(categoria) || 0
+      categoriaMap.set(categoria, actual + parseFloat(gasto.monto_ars))
+    })
+
+    return Array.from(categoriaMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+  }, [gastosDelMes])
+
+  // Top 5 categorías para el pie chart
+  const topCategorias = useMemo(() => {
+    const top5 = gastosPorCategoria.slice(0, 5)
+    const otros = gastosPorCategoria.slice(5).reduce((sum, cat) => sum + cat.value, 0)
+
+    if (otros > 0) {
+      return [...top5, { name: 'Otros', value: otros }]
+    }
+    return top5
+  }, [gastosPorCategoria])
+
+  // Datos para el gráfico de barras (últimos 4 meses)
+  const gastosPorMes = useMemo(() => {
+    const meses = []
+    for (let i = 3; i >= 0; i--) {
+      const mesDate = subMonths(now, i)
+      const inicio = startOfMonth(mesDate)
+      const fin = endOfMonth(mesDate)
+
+      const total = gastos
+        .filter((g) => {
+          const fecha = new Date(g.fecha)
+          return fecha >= inicio && fecha <= fin
+        })
+        .reduce((sum, g) => sum + parseFloat(g.monto_ars), 0)
+
+      meses.push({
+        mes: format(mesDate, 'MMM', { locale: es }),
+        total,
+      })
+    }
+    return meses
+  }, [gastos, now])
+
   const comprasPendientes = compras.filter((c) => c.pendiente_cuotas).length
   const gastosRecurrentesActivos = gastosRecurrentes.filter((g) => g.activo).length
   const debitosActivos = debitos.filter((d) => d.activo).length
+
+  // Promedio mensual proyectado (gastos fijos)
+  const gastosFijosProyectados = useMemo(() => {
+    const recurrentes = gastosRecurrentes
+      .filter((g) => g.activo)
+      .reduce((sum, g) => sum + g.monto, 0)
+
+    const debitosSum = debitos
+      .filter((d) => d.activo)
+      .reduce((sum, d) => sum + d.monto, 0)
+
+    return recurrentes + debitosSum
+  }, [gastosRecurrentes, debitos])
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -159,67 +262,189 @@ export default function DashboardPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-2 lg:grid-cols-4 md:gap-4">
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Gastos del Mes
             </CardTitle>
-            <Receipt className="h-4 w-4 text-muted-foreground" />
+            <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalGastosDelMes)}>
               {formatCurrency(totalGastosDelMes)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {gastosDelMes.length} gastos en{' '}
-              {format(now, 'MMMM yyyy')}
-            </p>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              {diferenciaPorcentual > 0 ? (
+                <TrendingUp className="h-3 w-3 text-red-500" />
+              ) : diferenciaPorcentual < 0 ? (
+                <TrendingDown className="h-3 w-3 text-green-500" />
+              ) : (
+                <Minus className="h-3 w-3" />
+              )}
+              <span className={diferenciaPorcentual > 0 ? 'text-red-500' : diferenciaPorcentual < 0 ? 'text-green-500' : ''}>
+                {diferenciaPorcentual !== 0 ? `${Math.abs(diferenciaPorcentual).toFixed(1)}%` : '0%'}
+              </span>
+              <span>vs mes anterior</span>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tarjetas</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
+            <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{tarjetas.length}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{tarjetas.length}</div>
             <p className="text-xs text-muted-foreground">
-              {tarjetas.filter((t) => t.tipo === 'credito').length} de crédito,{' '}
-              {tarjetas.filter((t) => t.tipo === 'debito').length} de débito
+              {tarjetas.filter((t) => t.tipo === 'credito').length} crédito,{' '}
+              {tarjetas.filter((t) => t.tipo === 'debito').length} débito
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Compras en Cuotas
             </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{comprasPendientes}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{comprasPendientes}</div>
             <p className="text-xs text-muted-foreground">
-              Compras con cuotas pendientes
+              Con cuotas pendientes
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Gastos Automáticos
+              Gastos Fijos
             </CardTitle>
-            <Repeat className="h-4 w-4 text-muted-foreground" />
+            <Repeat className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {gastosRecurrentesActivos + debitosActivos}
+            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(gastosFijosProyectados)}>
+              {formatCurrency(gastosFijosProyectados)}
             </div>
             <p className="text-xs text-muted-foreground">
               {gastosRecurrentesActivos} recurrentes, {debitosActivos} débitos
             </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid gap-3 md:gap-4 md:grid-cols-2">
+        {/* Gastos por Categoría - Pie Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Gastos por Categoría</CardTitle>
+            <CardDescription>
+              Distribución del mes de {format(now, 'MMMM', { locale: es })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topCategorias.length > 0 ? (
+              <div className="flex flex-col lg:flex-row items-center gap-4">
+                <div className="h-[200px] w-full lg:w-1/2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={topCategorias}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={80}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {topCategorias.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number) => formatCurrency(value)}
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="w-full lg:w-1/2 space-y-2">
+                  {topCategorias.slice(0, 5).map((cat, index) => (
+                    <div key={cat.name} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        />
+                        <span className="truncate max-w-[120px]">{cat.name}</span>
+                      </div>
+                      <span className="font-medium">{formatCurrency(cat.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No hay gastos este mes
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Evolución Mensual - Bar Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Evolución Mensual</CardTitle>
+            <CardDescription>
+              Gastos de los últimos 4 meses
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {gastosPorMes.some(m => m.total > 0) ? (
+              <div className="h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={gastosPorMes}>
+                    <XAxis
+                      dataKey="mes"
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => formatCurrency(value)}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Bar
+                      dataKey="total"
+                      fill="hsl(var(--primary))"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No hay datos suficientes
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

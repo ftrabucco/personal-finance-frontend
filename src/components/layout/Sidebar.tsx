@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -40,6 +41,12 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname()
   const { logout, user } = useAuth()
   const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  // Avoid hydration mismatch by only rendering theme-dependent content after mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   return (
     <div className="flex h-full w-64 flex-col border-r bg-card">
@@ -91,15 +98,22 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           className="w-full justify-start text-muted-foreground"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         >
-          {theme === 'dark' ? (
-            <>
-              <Sun className="mr-3 h-5 w-5" />
-              Modo Claro
-            </>
+          {mounted ? (
+            theme === 'dark' ? (
+              <>
+                <Sun className="mr-3 h-5 w-5" />
+                Modo Claro
+              </>
+            ) : (
+              <>
+                <Moon className="mr-3 h-5 w-5" />
+                Modo Oscuro
+              </>
+            )
           ) : (
             <>
-              <Moon className="mr-3 h-5 w-5" />
-              Modo Oscuro
+              <Moon className="mr-3 h-5 w-5 opacity-0" />
+              <span className="opacity-0">Modo Oscuro</span>
             </>
           )}
         </Button>

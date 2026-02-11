@@ -118,19 +118,19 @@ export default function GastosRecurrentesPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Mensual Estimado
             </CardTitle>
-            <Repeat className="h-4 w-4 text-muted-foreground" />
+            <Repeat className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <div className="text-2xl font-bold">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalARS)}>
                 {formatCurrency(totalARS)}
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground truncate" title={`US$ ${Number(totalUSD).toFixed(2)}`}>
                 US$ {Number(totalUSD).toFixed(2)}
               </div>
             </div>
@@ -140,28 +140,28 @@ export default function GastosRecurrentesPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Gastos Activos
             </CardTitle>
-            <Power className="h-4 w-4 text-green-500" />
+            <Power className="h-4 w-4 text-green-500 shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{gastosActivos.length}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{gastosActivos.length}</div>
             <p className="text-xs text-muted-foreground">Generando gastos</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Gastos Inactivos
             </CardTitle>
-            <PowerOff className="h-4 w-4 text-muted-foreground" />
+            <PowerOff className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">
               {gastos.length - gastosActivos.length}
             </div>
             <p className="text-xs text-muted-foreground">Pausados</p>

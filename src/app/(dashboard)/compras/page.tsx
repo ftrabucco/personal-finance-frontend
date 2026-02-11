@@ -104,37 +104,37 @@ export default function ComprasPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total ARS</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalARS)}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalARS)}>{formatCurrency(totalARS)}</div>
             <p className="text-xs text-muted-foreground">Compras en pesos</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total USD</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">US$ {totalUSD.toFixed(2)}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={`US$ ${totalUSD.toFixed(2)}`}>US$ {totalUSD.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Compras en dólares</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Compras Pendientes
             </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-yellow-500" />
+            <ShoppingCart className="h-4 w-4 text-yellow-500 shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{comprasPendientes}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{comprasPendientes}</div>
             <p className="text-xs text-muted-foreground">
               Con cuotas por pagar
             </p>

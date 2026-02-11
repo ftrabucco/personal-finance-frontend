@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Receipt, Trash2, RefreshCw, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { Receipt, Trash2, RefreshCw, Filter, ChevronLeft, ChevronRight, X, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -29,6 +29,9 @@ import type { Gasto } from '@/types'
 
 const ITEMS_PER_PAGE = 20
 
+type SortField = 'fecha' | 'descripcion' | 'categoria' | 'monto_ars' | 'tipo_origen'
+type SortDirection = 'asc' | 'desc'
+
 const TIPO_ORIGEN_OPTIONS = [
   { value: 'all', label: 'Todos los tipos' },
   { value: 'unico', label: 'Único' },
@@ -51,6 +54,8 @@ export default function GastosPage() {
   const [categoriaFilter, setCategoriaFilter] = useState('all')
   const [monthFilter, setMonthFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [sortField, setSortField] = useState<SortField>('fecha')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
   const { data: response, isLoading } = useAllGastos()
   const { data: categoriasResponse } = useCategorias()
@@ -96,7 +101,7 @@ export default function GastosPage() {
 
   // Filter gastos based on all criteria
   const filteredGastos = useMemo(() => {
-    return gastos.filter((gasto) => {
+    const filtered = gastos.filter((gasto) => {
       // Search filter
       if (searchTerm && !gasto.descripcion.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false
@@ -127,7 +132,32 @@ export default function GastosPage() {
 
       return true
     })
-  }, [gastos, searchTerm, tipoOrigenFilter, categoriaFilter, monthFilter])
+
+    // Sort
+    return filtered.sort((a, b) => {
+      let comparison = 0
+
+      switch (sortField) {
+        case 'fecha':
+          comparison = new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+          break
+        case 'descripcion':
+          comparison = a.descripcion.localeCompare(b.descripcion)
+          break
+        case 'categoria':
+          comparison = (a.categoria?.nombre_categoria || '').localeCompare(b.categoria?.nombre_categoria || '')
+          break
+        case 'monto_ars':
+          comparison = parseFloat(a.monto_ars) - parseFloat(b.monto_ars)
+          break
+        case 'tipo_origen':
+          comparison = a.tipo_origen.localeCompare(b.tipo_origen)
+          break
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [gastos, searchTerm, tipoOrigenFilter, categoriaFilter, monthFilter, sortField, sortDirection])
 
   // Pagination
   const totalPages = Math.ceil(filteredGastos.length / ITEMS_PER_PAGE)
@@ -151,6 +181,36 @@ export default function GastosPage() {
   }
 
   const hasActiveFilters = searchTerm || tipoOrigenFilter !== 'all' || categoriaFilter !== 'all' || monthFilter !== 'all'
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('desc')
+    }
+    setCurrentPage(1)
+  }
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead
+      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field ? (
+          sortDirection === 'asc' ? (
+            <ArrowUp className="h-4 w-4" />
+          ) : (
+            <ArrowDown className="h-4 w-4" />
+          )
+        ) : (
+          <ArrowUpDown className="h-4 w-4 opacity-30" />
+        )}
+      </div>
+    </TableHead>
+  )
 
   const totalGastos = filteredGastos.reduce(
     (sum, gasto) => sum + parseFloat(gasto.monto_ars),
@@ -177,15 +237,15 @@ export default function GastosPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total de Gastos
             </CardTitle>
-            <Receipt className="h-4 w-4 text-muted-foreground" />
+            <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalGastos)}>
               {formatCurrency(totalGastos)}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -194,23 +254,23 @@ export default function GastosPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Únicos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">
               {filteredGastos.filter((g) => g.tipo_origen === 'unico').length}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Recurrentes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">
               {
                 filteredGastos.filter((g) => g.tipo_origen === 'recurrente')
                   .length
@@ -219,12 +279,12 @@ export default function GastosPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Compras</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">
               {filteredGastos.filter((g) => g.tipo_origen === 'compra').length}
             </div>
           </CardContent>
@@ -376,11 +436,11 @@ export default function GastosPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Descripción</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Categoría</TableHead>
-                      <TableHead>Monto ARS</TableHead>
+                      <SortableHeader field="fecha">Fecha</SortableHeader>
+                      <SortableHeader field="descripcion">Descripción</SortableHeader>
+                      <SortableHeader field="tipo_origen">Tipo</SortableHeader>
+                      <SortableHeader field="categoria">Categoría</SortableHeader>
+                      <SortableHeader field="monto_ars">Monto ARS</SortableHeader>
                       <TableHead>Monto USD</TableHead>
                       <TableHead>Tipo de Pago</TableHead>
                       <TableHead>Cuotas</TableHead>
