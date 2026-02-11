@@ -78,13 +78,13 @@ export default function DashboardPage() {
   const debitosActivos = debitos.filter((d) => d.activo).length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Exchange Rate Alert */}
       {(tipoCambioError || !tipoCambio) && (
         <Card className="border-orange-500 bg-orange-50 dark:bg-orange-950">
-          <CardContent className="flex items-center justify-between py-4">
+          <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <DollarSign className="h-5 w-5 text-orange-600" />
+              <DollarSign className="h-5 w-5 text-orange-600 shrink-0" />
               <div>
                 <p className="font-medium text-orange-800 dark:text-orange-200">
                   Tipo de cambio no configurado
@@ -99,7 +99,7 @@ export default function DashboardPage() {
               disabled={actualizarTipoCambio.isPending}
               variant="outline"
               size="sm"
-              className="gap-2 border-orange-500 text-orange-700 hover:bg-orange-100"
+              className="gap-2 border-orange-500 text-orange-700 hover:bg-orange-100 w-full sm:w-auto"
             >
               <RefreshCw className={`h-4 w-4 ${actualizarTipoCambio.isPending ? 'animate-spin' : ''}`} />
               {actualizarTipoCambio.isPending ? 'Actualizando...' : 'Cargar Tipo de Cambio'}
@@ -111,9 +111,9 @@ export default function DashboardPage() {
       {/* Exchange Rate Info (when available) */}
       {tipoCambio && !tipoCambioError && (
         <Card className="border-green-500 bg-green-50 dark:bg-green-950">
-          <CardContent className="flex items-center justify-between py-4">
+          <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <DollarSign className="h-5 w-5 text-green-600" />
+              <DollarSign className="h-5 w-5 text-green-600 shrink-0" />
               <div>
                 <p className="font-medium text-green-800 dark:text-green-200">
                   Tipo de cambio: ${tipoCambio.valor_venta_usd_ars?.toLocaleString('es-AR')} ARS/USD
@@ -128,7 +128,7 @@ export default function DashboardPage() {
               disabled={actualizarTipoCambio.isPending}
               variant="ghost"
               size="sm"
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
             >
               <RefreshCw className={`h-4 w-4 ${actualizarTipoCambio.isPending ? 'animate-spin' : ''}`} />
               Actualizar
@@ -138,10 +138,10 @@ export default function DashboardPage() {
       )}
 
       {/* Welcome */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Hola, {user?.nombre}!</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold md:text-3xl">Hola, {user?.nombre}!</h1>
+          <p className="text-sm text-muted-foreground md:text-base">
             Aquí está el resumen de tus finanzas personales
           </p>
         </div>
@@ -150,7 +150,7 @@ export default function DashboardPage() {
           disabled={procesarPendientes.isPending}
           variant="outline"
           size="sm"
-          className="gap-2"
+          className="gap-2 w-full sm:w-auto"
         >
           <RefreshCw className={`h-4 w-4 ${procesarPendientes.isPending ? 'animate-spin' : ''}`} />
           {procesarPendientes.isPending ? 'Procesando...' : 'Procesar Pendientes'}
@@ -158,7 +158,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-2 lg:grid-cols-4 md:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -224,8 +224,8 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card>
+      {/* Quick Actions - Hidden on mobile (using BottomNav instead) */}
+      <Card className="hidden md:block">
         <CardHeader>
           <CardTitle>Acciones Rápidas</CardTitle>
           <CardDescription>
@@ -276,7 +276,7 @@ export default function DashboardPage() {
       </Card>
 
       {/* Recent Activity */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 md:gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Gastos Recientes</CardTitle>

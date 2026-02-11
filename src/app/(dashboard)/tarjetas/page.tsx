@@ -91,15 +91,15 @@ export default function TarjetasPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tarjetas</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Tarjetas</h1>
+          <p className="text-sm text-muted-foreground md:text-base">
             Gestiona tus tarjetas de débito y crédito
           </p>
         </div>
-        <Button onClick={handleCreate}>
+        <Button onClick={handleCreate} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Nueva Tarjeta
         </Button>
@@ -120,74 +120,129 @@ export default function TarjetasPage() {
               No hay tarjetas registradas. Crea tu primera tarjeta.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Banco</TableHead>
-                  <TableHead>Cierre</TableHead>
-                  <TableHead>Vencimiento</TableHead>
-                  <TableHead>Cuotas</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile: Cards */}
+              <div className="space-y-3 md:hidden">
                 {tarjetas.map((tarjeta) => (
-                  <TableRow key={tarjeta.id}>
-                    <TableCell className="font-medium">
-                      {tarjeta.nombre}
-                      {tarjeta.ultimos_4_digitos && (
-                        <span className="ml-2 text-muted-foreground">
-                          ****{tarjeta.ultimos_4_digitos}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getTipoBadgeVariant(tarjeta.tipo)}>
-                        {tarjeta.tipo}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{tarjeta.banco}</TableCell>
-                    <TableCell>
-                      {tarjeta.dia_mes_cierre
-                        ? `Día ${tarjeta.dia_mes_cierre}`
-                        : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {tarjeta.dia_mes_vencimiento
-                        ? `Día ${tarjeta.dia_mes_vencimiento}`
-                        : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {tarjeta.permite_cuotas ? (
-                        <Badge variant="success">Sí</Badge>
-                      ) : (
-                        <Badge variant="secondary">No</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(tarjeta)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(tarjeta.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                  <div
+                    key={tarjeta.id}
+                    className="flex items-center justify-between rounded-lg border p-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                        <CreditCard className="h-5 w-5 text-primary" />
                       </div>
-                    </TableCell>
-                  </TableRow>
+                      <div>
+                        <div className="font-medium">
+                          {tarjeta.nombre}
+                          {tarjeta.ultimos_4_digitos && (
+                            <span className="ml-1 text-muted-foreground">
+                              ****{tarjeta.ultimos_4_digitos}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Badge variant={getTipoBadgeVariant(tarjeta.tipo)} className="text-xs">
+                            {tarjeta.tipo}
+                          </Badge>
+                          <span>{tarjeta.banco}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => handleEdit(tarjeta)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => handleDelete(tarjeta.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop: Table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Banco</TableHead>
+                      <TableHead>Cierre</TableHead>
+                      <TableHead>Vencimiento</TableHead>
+                      <TableHead>Cuotas</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tarjetas.map((tarjeta) => (
+                      <TableRow key={tarjeta.id}>
+                        <TableCell className="font-medium">
+                          {tarjeta.nombre}
+                          {tarjeta.ultimos_4_digitos && (
+                            <span className="ml-2 text-muted-foreground">
+                              ****{tarjeta.ultimos_4_digitos}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getTipoBadgeVariant(tarjeta.tipo)}>
+                            {tarjeta.tipo}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{tarjeta.banco}</TableCell>
+                        <TableCell>
+                          {tarjeta.dia_mes_cierre
+                            ? `Día ${tarjeta.dia_mes_cierre}`
+                            : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {tarjeta.dia_mes_vencimiento
+                            ? `Día ${tarjeta.dia_mes_vencimiento}`
+                            : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {tarjeta.permite_cuotas ? (
+                            <Badge variant="success">Sí</Badge>
+                          ) : (
+                            <Badge variant="secondary">No</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(tarjeta)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(tarjeta.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
