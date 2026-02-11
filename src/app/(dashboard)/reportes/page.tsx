@@ -249,19 +249,19 @@ export default function ReportesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Reportes Financieros</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold md:text-3xl">Reportes Financieros</h1>
+          <p className="text-sm text-muted-foreground md:text-base">
             Análisis detallado de tus gastos e ingresos
           </p>
         </div>
 
         {/* Month selector */}
         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -277,18 +277,18 @@ export default function ReportesPage() {
 
       {/* Selected period */}
       <Card className="bg-primary/5 border-primary/20">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
+        <CardContent className="pt-4 md:pt-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Calendar className="h-5 w-5 text-primary" />
                 <span className="text-sm text-muted-foreground">Período analizado</span>
               </div>
-              <p className="text-2xl font-bold capitalize">{dateRange.monthName}</p>
+              <p className="text-xl font-bold capitalize md:text-2xl">{dateRange.monthName}</p>
             </div>
-            <div className="text-right">
+            <div className="sm:text-right">
               <p className="text-sm text-muted-foreground mb-1">Total gastado</p>
-              <p className="text-3xl font-bold">{formatCurrency(totalGastos)}</p>
+              <p className="text-2xl font-bold md:text-3xl">{formatCurrency(totalGastos)}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {gastosDelPeriodo.length} gastos registrados
               </p>
@@ -311,17 +311,17 @@ export default function ReportesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Mes anterior</p>
-                <p className="text-xl font-semibold">
+                <p className="text-lg font-semibold md:text-xl">
                   {formatCurrency(comparacionMesAnterior.mesAnterior)}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Diferencia</p>
                 <p
-                  className={`text-xl font-semibold ${
+                  className={`text-lg font-semibold md:text-xl ${
                     comparacionMesAnterior.aumentó ? 'text-red-500' : 'text-green-500'
                   }`}
                 >
@@ -332,7 +332,7 @@ export default function ReportesPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Variación</p>
                 <p
-                  className={`text-xl font-semibold ${
+                  className={`text-lg font-semibold md:text-xl ${
                     comparacionMesAnterior.aumentó ? 'text-red-500' : 'text-green-500'
                   }`}
                 >
@@ -346,7 +346,7 @@ export default function ReportesPage() {
       )}
 
       {/* Grid with reports */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 md:gap-6 md:grid-cols-2">
         {/* Gastos por categoría */}
         <Card>
           <CardHeader>

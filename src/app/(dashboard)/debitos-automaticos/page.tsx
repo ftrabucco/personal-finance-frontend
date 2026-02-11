@@ -101,23 +101,23 @@ export default function DebitosAutomaticosPage() {
   )
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
             Débitos Automáticos
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground md:text-base">
             Gestiona tus suscripciones y servicios recurrentes
           </p>
         </div>
-        <Button onClick={handleCreate}>
+        <Button onClick={handleCreate} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Nuevo Débito
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -184,72 +184,67 @@ export default function DebitosAutomaticosPage() {
               No hay débitos automáticos registrados. Crea tu primer débito.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead>Monto</TableHead>
-                  <TableHead>Día de Débito</TableHead>
-                  <TableHead>Frecuencia</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Última Generación</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile: Cards */}
+              <div className="space-y-3 md:hidden">
                 {debitos.map((debito) => (
-                  <TableRow key={debito.id}>
-                    <TableCell className="max-w-xs truncate font-medium">
-                      {debito.descripcion}
-                    </TableCell>
-                    <TableCell>
-                      <DualCurrencyDisplay
-                        montoArs={debito.monto_ars || 0}
-                        montoUsd={debito.monto_usd || 0}
-                        monedaOrigen={debito.moneda_origen || 'ARS'}
-                        tipoCambio={debito.tipo_cambio_referencia}
-                      />
-                    </TableCell>
-                    <TableCell>Día {debito.dia_de_pago}</TableCell>
-                    <TableCell>{debito.frecuencia?.nombre_frecuencia || '-'}</TableCell>
-                    <TableCell>
-                      {debito.categoria?.nombre_categoria || '-'}
-                    </TableCell>
-                    <TableCell>
-                      {debito.ultima_fecha_generado
-                        ? format(
-                            new Date(debito.ultima_fecha_generado),
-                            'dd/MM/yyyy'
-                          )
-                        : 'Nunca'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {debito.activo ? (
-                          <Badge variant="success">Activo</Badge>
-                        ) : (
-                          <Badge variant="secondary">Inactivo</Badge>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggle(debito.id)}
-                          title={debito.activo ? 'Desactivar' : 'Activar'}
-                        >
+                  <div key={debito.id} className="rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
                           {debito.activo ? (
-                            <PowerOff className="h-4 w-4 text-yellow-500" />
+                            <Badge variant="success" className="text-xs">Activo</Badge>
                           ) : (
-                            <Power className="h-4 w-4 text-green-500" />
+                            <Badge variant="secondary" className="text-xs">Inactivo</Badge>
                           )}
-                        </Button>
+                          <span className="text-xs text-muted-foreground">
+                            Día {debito.dia_de_pago}
+                          </span>
+                        </div>
+                        <p className="font-medium truncate">{debito.descripcion}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{debito.frecuencia?.nombre_frecuencia || '-'}</span>
+                          {debito.categoria?.nombre_categoria && (
+                            <>
+                              <span>•</span>
+                              <span>{debito.categoria.nombre_categoria}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="text-right shrink-0">
+                        <DualCurrencyDisplay
+                          montoArs={debito.monto_ars || 0}
+                          montoUsd={debito.monto_usd || 0}
+                          monedaOrigen={debito.moneda_origen || 'ARS'}
+                          tipoCambio={debito.tipo_cambio_referencia}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => handleToggle(debito.id)}
+                      >
+                        {debito.activo ? (
+                          <>
+                            <PowerOff className="h-4 w-4 mr-1 text-yellow-500" />
+                            Pausar
+                          </>
+                        ) : (
+                          <>
+                            <Power className="h-4 w-4 mr-1 text-green-500" />
+                            Activar
+                          </>
+                        )}
+                      </Button>
+                      <div className="flex gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-8"
                           onClick={() => handleEdit(debito)}
                         >
                           <Pencil className="h-4 w-4" />
@@ -257,16 +252,104 @@ export default function DebitosAutomaticosPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-8 text-destructive hover:text-destructive"
                           onClick={() => handleDelete(debito.id)}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop: Table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Descripción</TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead>Día de Débito</TableHead>
+                      <TableHead>Frecuencia</TableHead>
+                      <TableHead>Categoría</TableHead>
+                      <TableHead>Última Generación</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {debitos.map((debito) => (
+                      <TableRow key={debito.id}>
+                        <TableCell className="max-w-xs truncate font-medium">
+                          {debito.descripcion}
+                        </TableCell>
+                        <TableCell>
+                          <DualCurrencyDisplay
+                            montoArs={debito.monto_ars || 0}
+                            montoUsd={debito.monto_usd || 0}
+                            monedaOrigen={debito.moneda_origen || 'ARS'}
+                            tipoCambio={debito.tipo_cambio_referencia}
+                          />
+                        </TableCell>
+                        <TableCell>Día {debito.dia_de_pago}</TableCell>
+                        <TableCell>{debito.frecuencia?.nombre_frecuencia || '-'}</TableCell>
+                        <TableCell>
+                          {debito.categoria?.nombre_categoria || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {debito.ultima_fecha_generado
+                            ? format(
+                                new Date(debito.ultima_fecha_generado),
+                                'dd/MM/yyyy'
+                              )
+                            : 'Nunca'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {debito.activo ? (
+                              <Badge variant="success">Activo</Badge>
+                            ) : (
+                              <Badge variant="secondary">Inactivo</Badge>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggle(debito.id)}
+                              title={debito.activo ? 'Desactivar' : 'Activar'}
+                            >
+                              {debito.activo ? (
+                                <PowerOff className="h-4 w-4 text-yellow-500" />
+                              ) : (
+                                <Power className="h-4 w-4 text-green-500" />
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(debito)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(debito.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

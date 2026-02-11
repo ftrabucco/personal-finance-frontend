@@ -96,16 +96,16 @@ export default function PerfilPage() {
   }
 
   return (
-    <div className="container max-w-2xl py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Mi Perfil</h1>
-        <p className="text-muted-foreground">
+    <div className="container max-w-2xl px-4 py-4 md:py-8">
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-2xl font-bold md:text-3xl">Mi Perfil</h1>
+        <p className="text-sm text-muted-foreground md:text-base">
           Administra tu información personal y seguridad
         </p>
       </div>
 
       {/* Información del perfil */}
-      <Card className="mb-6">
+      <Card className="mb-4 md:mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
@@ -163,7 +163,7 @@ export default function PerfilPage() {
         </CardContent>
       </Card>
 
-      <hr className="my-6" />
+      <hr className="my-4 md:my-6" />
 
       {/* Cambiar contraseña */}
       <Card>

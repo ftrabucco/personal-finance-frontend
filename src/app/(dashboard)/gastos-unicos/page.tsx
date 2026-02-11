@@ -89,22 +89,22 @@ export default function GastosUnicosPage() {
   const totalUSD = gastos.reduce((sum, gasto) => sum + (Number(gasto.monto_usd) || 0), 0)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gastos Únicos</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Gastos Únicos</h1>
+          <p className="text-sm text-muted-foreground md:text-base">
             Registra gastos que ocurren una sola vez
           </p>
         </div>
-        <Button onClick={handleCreate}>
+        <Button onClick={handleCreate} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Nuevo Gasto
         </Button>
       </div>
 
       {/* ✨ Cards con totales en ambas monedas */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total ARS</CardTitle>
@@ -158,69 +158,125 @@ export default function GastosUnicosPage() {
               No hay gastos registrados. Crea tu primer gasto único.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Monto</TableHead>
-                  <TableHead>Tipo de Pago</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile: Cards */}
+              <div className="space-y-3 md:hidden">
                 {gastos.map((gasto) => (
-                  <TableRow key={gasto.id}>
-                    <TableCell>
-                      {format(new Date(gasto.fecha), 'dd/MM/yyyy')}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {gasto.descripcion}
-                    </TableCell>
-                    <TableCell>
-                      {gasto.categoria?.nombre_categoria || 'Sin categoría'}
-                    </TableCell>
-                    {/* ✨ Componente DualCurrencyDisplay */}
-                    <TableCell>
-                      <DualCurrencyDisplay
-                        montoArs={gasto.monto_ars}
-                        montoUsd={gasto.monto_usd}
-                        monedaOrigen={gasto.moneda_origen}
-                        tipoCambio={gasto.tipo_cambio_usado}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {gasto.tipoPago?.nombre || 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={gasto.procesado ? 'default' : 'secondary'}>
-                        {gasto.procesado ? 'Procesado' : 'Pendiente'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(gasto)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(gasto.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                  <div key={gasto.id} className="rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant={gasto.procesado ? 'default' : 'secondary'} className="text-xs">
+                            {gasto.procesado ? 'Procesado' : 'Pendiente'}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(gasto.fecha), 'dd/MM/yyyy')}
+                          </span>
+                        </div>
+                        <p className="font-medium truncate">{gasto.descripcion}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {gasto.categoria?.nombre_categoria || 'Sin categoría'}
+                        </p>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                      <div className="text-right shrink-0">
+                        <DualCurrencyDisplay
+                          montoArs={gasto.monto_ars}
+                          montoUsd={gasto.monto_usd}
+                          monedaOrigen={gasto.moneda_origen}
+                          tipoCambio={gasto.tipo_cambio_usado}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end mt-2 pt-2 border-t gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => handleEdit(gasto)}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-destructive hover:text-destructive"
+                        onClick={() => handleDelete(gasto.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Eliminar
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop: Table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Descripción</TableHead>
+                      <TableHead>Categoría</TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead>Tipo de Pago</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {gastos.map((gasto) => (
+                      <TableRow key={gasto.id}>
+                        <TableCell>
+                          {format(new Date(gasto.fecha), 'dd/MM/yyyy')}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate">
+                          {gasto.descripcion}
+                        </TableCell>
+                        <TableCell>
+                          {gasto.categoria?.nombre_categoria || 'Sin categoría'}
+                        </TableCell>
+                        <TableCell>
+                          <DualCurrencyDisplay
+                            montoArs={gasto.monto_ars}
+                            montoUsd={gasto.monto_usd}
+                            monedaOrigen={gasto.moneda_origen}
+                            tipoCambio={gasto.tipo_cambio_usado}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {gasto.tipoPago?.nombre || 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={gasto.procesado ? 'default' : 'secondary'}>
+                            {gasto.procesado ? 'Procesado' : 'Pendiente'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(gasto)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(gasto.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
