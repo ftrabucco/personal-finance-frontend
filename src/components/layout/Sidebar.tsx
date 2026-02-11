@@ -13,7 +13,10 @@ import {
   BarChart3,
   User,
   LogOut,
+  Moon,
+  Sun,
 } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import { useAuth } from '@/lib/auth/authContext'
 import { Button } from '@/components/ui/button'
 
@@ -36,6 +39,7 @@ interface SidebarProps {
 export function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname()
   const { logout, user } = useAuth()
+  const { theme, setTheme } = useTheme()
 
   return (
     <div className="flex h-full w-64 flex-col border-r bg-card">
@@ -80,8 +84,25 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="border-t p-4">
+      {/* Theme toggle & Logout */}
+      <div className="border-t p-4 space-y-1">
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-muted-foreground"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        >
+          {theme === 'dark' ? (
+            <>
+              <Sun className="mr-3 h-5 w-5" />
+              Modo Claro
+            </>
+          ) : (
+            <>
+              <Moon className="mr-3 h-5 w-5" />
+              Modo Oscuro
+            </>
+          )}
+        </Button>
         <Button
           variant="ghost"
           className="w-full justify-start text-muted-foreground hover:text-destructive"

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { Receipt, Trash2, RefreshCw, Filter } from 'lucide-react'
-import { format } from 'date-fns'
+import { useState, useMemo } from 'react'
+import { Receipt, Trash2, RefreshCw, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -13,19 +13,52 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useAllGastos, useDeleteGasto, useGenerateGastos } from '@/lib/hooks/useGastos'
+import { useCategorias } from '@/lib/hooks/useCatalogos'
 import { formatCurrency } from '@/lib/utils/formatters'
 import type { Gasto } from '@/types'
 
+const ITEMS_PER_PAGE = 20
+
+const TIPO_ORIGEN_OPTIONS = [
+  { value: 'all', label: 'Todos los tipos' },
+  { value: 'unico', label: 'Único' },
+  { value: 'recurrente', label: 'Recurrente' },
+  { value: 'debito_automatico', label: 'Débito Automático' },
+  { value: 'compra', label: 'Compra' },
+]
+
+const MONTH_OPTIONS = [
+  { value: 'all', label: 'Todas las fechas' },
+  { value: '0', label: 'Mes actual' },
+  { value: '1', label: 'Mes anterior' },
+  { value: '2', label: 'Hace 2 meses' },
+  { value: '3', label: 'Hace 3 meses' },
+]
+
 export default function GastosPage() {
   const [searchTerm, setSearchTerm] = useState('')
+  const [tipoOrigenFilter, setTipoOrigenFilter] = useState('all')
+  const [categoriaFilter, setCategoriaFilter] = useState('all')
+  const [monthFilter, setMonthFilter] = useState('all')
+  const [currentPage, setCurrentPage] = useState(1)
+
   const { data: response, isLoading } = useAllGastos()
+  const { data: categoriasResponse } = useCategorias()
   const deleteMutation = useDeleteGasto()
   const generateMutation = useGenerateGastos()
 
   const gastos = response?.data || []
+  const categorias = categoriasResponse?.data || []
 
   const handleDelete = async (id: number) => {
     if (window.confirm('¿Estás seguro de eliminar este gasto?')) {
@@ -61,9 +94,63 @@ export default function GastosPage() {
     }
   }
 
-  const filteredGastos = gastos.filter((gasto) =>
-    gasto.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Filter gastos based on all criteria
+  const filteredGastos = useMemo(() => {
+    return gastos.filter((gasto) => {
+      // Search filter
+      if (searchTerm && !gasto.descripcion.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false
+      }
+
+      // Tipo origen filter
+      if (tipoOrigenFilter !== 'all' && gasto.tipo_origen !== tipoOrigenFilter) {
+        return false
+      }
+
+      // Categoria filter
+      if (categoriaFilter !== 'all' && gasto.categoria?.id?.toString() !== categoriaFilter) {
+        return false
+      }
+
+      // Month filter
+      if (monthFilter !== 'all') {
+        const monthsAgo = parseInt(monthFilter)
+        const targetDate = subMonths(new Date(), monthsAgo)
+        const monthStart = startOfMonth(targetDate)
+        const monthEnd = endOfMonth(targetDate)
+        const gastoDate = new Date(gasto.fecha)
+
+        if (gastoDate < monthStart || gastoDate > monthEnd) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [gastos, searchTerm, tipoOrigenFilter, categoriaFilter, monthFilter])
+
+  // Pagination
+  const totalPages = Math.ceil(filteredGastos.length / ITEMS_PER_PAGE)
+  const paginatedGastos = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    return filteredGastos.slice(start, start + ITEMS_PER_PAGE)
+  }, [filteredGastos, currentPage])
+
+  // Reset to page 1 when filters change
+  const handleFilterChange = (setter: (value: string) => void) => (value: string) => {
+    setter(value)
+    setCurrentPage(1)
+  }
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setTipoOrigenFilter('all')
+    setCategoriaFilter('all')
+    setMonthFilter('all')
+    setCurrentPage(1)
+  }
+
+  const hasActiveFilters = searchTerm || tipoOrigenFilter !== 'all' || categoriaFilter !== 'all' || monthFilter !== 'all'
 
   const totalGastos = filteredGastos.reduce(
     (sum, gasto) => sum + parseFloat(gasto.monto_ars),
@@ -156,10 +243,70 @@ export default function GastosPage() {
               <Input
                 placeholder="Buscar..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full sm:w-64"
+                onChange={(e) => {
+                  setSearchTerm(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="w-full sm:w-48"
               />
             </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-col gap-3 mt-4 pt-4 border-t">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <Select value={tipoOrigenFilter} onValueChange={handleFilterChange(setTipoOrigenFilter)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo de gasto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIPO_ORIGEN_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={categoriaFilter} onValueChange={handleFilterChange(setCategoriaFilter)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Categoría" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las categorías</SelectItem>
+                  {categorias.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id.toString()}>
+                      {cat.nombre_categoria}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={monthFilter} onValueChange={handleFilterChange(setMonthFilter)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTH_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {hasActiveFilters && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">
+                  {filteredGastos.length} gastos encontrados
+                </span>
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="h-4 w-4 mr-1" />
+                  Limpiar filtros
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent className="px-3 md:px-6">
@@ -167,13 +314,15 @@ export default function GastosPage() {
             <div className="text-center py-8">Cargando gastos...</div>
           ) : filteredGastos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No hay gastos registrados.
+              {hasActiveFilters
+                ? 'No hay gastos que coincidan con los filtros.'
+                : 'No hay gastos registrados.'}
             </div>
           ) : (
             <>
               {/* Mobile: Cards */}
               <div className="space-y-3 md:hidden">
-                {filteredGastos.map((gasto) => (
+                {paginatedGastos.map((gasto) => (
                   <div
                     key={gasto.id}
                     className="rounded-lg border p-3"
@@ -223,9 +372,9 @@ export default function GastosPage() {
               </div>
 
               {/* Desktop: Table */}
-              <div className="hidden md:block max-h-[600px] overflow-y-auto">
+              <div className="hidden md:block">
                 <Table>
-                  <TableHeader className="sticky top-0 bg-background">
+                  <TableHeader>
                     <TableRow>
                       <TableHead>Fecha</TableHead>
                       <TableHead>Descripción</TableHead>
@@ -239,7 +388,7 @@ export default function GastosPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredGastos.map((gasto) => (
+                    {paginatedGastos.map((gasto) => (
                       <TableRow key={gasto.id}>
                         <TableCell>
                           {format(new Date(gasto.fecha), 'dd/MM/yyyy')}
@@ -284,6 +433,60 @@ export default function GastosPage() {
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex flex-col gap-3 mt-4 pt-4 border-t sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-muted-foreground text-center sm:text-left">
+                    Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredGastos.length)} de {filteredGastos.length} gastos
+                  </p>
+                  <div className="flex items-center justify-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      <span className="hidden sm:inline ml-1">Anterior</span>
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum: number
+                        if (totalPages <= 5) {
+                          pageNum = i + 1
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i
+                        } else {
+                          pageNum = currentPage - 2 + i
+                        }
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? 'default' : 'outline'}
+                            size="sm"
+                            className="w-8 h-8 p-0"
+                            onClick={() => setCurrentPage(pageNum)}
+                          >
+                            {pageNum}
+                          </Button>
+                        )
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      <span className="hidden sm:inline mr-1">Siguiente</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </CardContent>
