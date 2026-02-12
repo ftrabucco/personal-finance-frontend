@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, Pencil, Trash2, CreditCard, Power, PowerOff } from 'lucide-react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Plus, Pencil, Trash2, CreditCard, Power, PowerOff, Play } from 'lucide-react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,18 +31,31 @@ import {
   useDeleteDebitoAutomatico,
   useToggleDebitoAutomatico,
 } from '@/lib/hooks/useDebitosAutomaticos'
+import { useProcesarDebitoIndividual } from '@/lib/hooks/useProcesamiento'
 import { formatCurrency } from '@/lib/utils/formatters'
 import type { DebitoAutomatico } from '@/types'
 
-export default function DebitosAutomaticosPage() {
+function DebitosAutomaticosContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingDebito, setEditingDebito] = useState<DebitoAutomatico | null>(null)
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Open dialog if ?new=true is in URL
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setEditingDebito(null)
+      setIsDialogOpen(true)
+      router.replace('/debitos-automaticos', { scroll: false })
+    }
+  }, [searchParams, router])
 
   const { data: response, isLoading } = useDebitosAutomaticos()
   const createMutation = useCreateDebitoAutomatico()
   const updateMutation = useUpdateDebitoAutomatico()
   const deleteMutation = useDeleteDebitoAutomatico()
   const toggleMutation = useToggleDebitoAutomatico()
+  const procesarMutation = useProcesarDebitoIndividual()
 
   const debitos = response?.data || []
 
@@ -70,6 +84,14 @@ export default function DebitosAutomaticosPage() {
       await toggleMutation.mutateAsync(id)
     } catch (error) {
       console.error('Error al cambiar estado:', error)
+    }
+  }
+
+  const handleProcesar = async (id: number) => {
+    try {
+      await procesarMutation.mutateAsync(id)
+    } catch (error) {
+      console.error('Error al procesar débito:', error)
     }
   }
 
@@ -222,24 +244,38 @@ export default function DebitosAutomaticosPage() {
                       </div>
                     </div>
                     <div className="flex justify-between items-center mt-2 pt-2 border-t">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8"
-                        onClick={() => handleToggle(debito.id)}
-                      >
-                        {debito.activo ? (
-                          <>
-                            <PowerOff className="h-4 w-4 mr-1 text-yellow-500" />
-                            Pausar
-                          </>
-                        ) : (
-                          <>
-                            <Power className="h-4 w-4 mr-1 text-green-500" />
-                            Activar
-                          </>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => handleToggle(debito.id)}
+                        >
+                          {debito.activo ? (
+                            <>
+                              <PowerOff className="h-4 w-4 mr-1 text-yellow-500" />
+                              Pausar
+                            </>
+                          ) : (
+                            <>
+                              <Power className="h-4 w-4 mr-1 text-green-500" />
+                              Activar
+                            </>
+                          )}
+                        </Button>
+                        {debito.activo && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => handleProcesar(debito.id)}
+                            disabled={procesarMutation.isPending}
+                          >
+                            <Play className="h-4 w-4 mr-1 text-blue-500" />
+                            Procesar
+                          </Button>
                         )}
-                      </Button>
+                      </div>
                       <div className="flex gap-2">
                         <Button
                           variant="ghost"
@@ -328,6 +364,17 @@ export default function DebitosAutomaticosPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
+                            {debito.activo && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleProcesar(debito.id)}
+                                disabled={procesarMutation.isPending}
+                                title="Procesar este mes"
+                              >
+                                <Play className="h-4 w-4 text-blue-500" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -378,5 +425,13 @@ export default function DebitosAutomaticosPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+export default function DebitosAutomaticosPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-8">Cargando...</div>}>
+      <DebitosAutomaticosContent />
+    </Suspense>
   )
 }

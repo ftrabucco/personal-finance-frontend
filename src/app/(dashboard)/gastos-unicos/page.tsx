@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Wallet } from 'lucide-react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
@@ -33,9 +34,21 @@ import { formatCurrency } from '@/lib/utils/formatters'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
 import type { GastoUnico } from '@/types'
 
-export default function GastosUnicosPage() {
+function GastosUnicosContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingGasto, setEditingGasto] = useState<GastoUnico | null>(null)
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Open dialog if ?new=true is in URL
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setEditingGasto(null)
+      setIsDialogOpen(true)
+      // Remove the query param from URL
+      router.replace('/gastos-unicos', { scroll: false })
+    }
+  }, [searchParams, router])
 
   const { data: response, isLoading } = useGastosUnicos()
   const createMutation = useCreateGastoUnico()
@@ -163,21 +176,19 @@ export default function GastosUnicosPage() {
               <div className="space-y-3 md:hidden">
                 {gastos.map((gasto) => (
                   <div key={gasto.id} className="rounded-lg border p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant={gasto.procesado ? 'default' : 'secondary'} className="text-xs">
-                            {gasto.procesado ? 'Procesado' : 'Pendiente'}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(gasto.fecha), 'dd/MM/yyyy')}
-                          </span>
-                        </div>
-                        <p className="font-medium truncate">{gasto.descripcion}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {gasto.categoria?.nombre_categoria || 'Sin categoría'}
-                        </p>
-                      </div>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <Badge variant={gasto.procesado ? 'default' : 'secondary'} className="text-xs shrink-0">
+                        {gasto.procesado ? 'Procesado' : 'Pendiente'}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(gasto.fecha), 'dd/MM/yyyy')}
+                      </span>
+                    </div>
+                    <p className="font-medium truncate mb-1">{gasto.descripcion}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground truncate">
+                        {gasto.categoria?.nombre_categoria || 'Sin categoría'}
+                      </p>
                       <div className="text-right shrink-0">
                         <DualCurrencyDisplay
                           montoArs={gasto.monto_ars}
@@ -305,5 +316,13 @@ export default function GastosUnicosPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+export default function GastosUnicosPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-8">Cargando...</div>}>
+      <GastosUnicosContent />
+    </Suspense>
   )
 }
