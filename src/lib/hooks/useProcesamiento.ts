@@ -145,3 +145,59 @@ export function useProcesarDebitos() {
     },
   })
 }
+
+export function useProcesarGastoRecurrenteIndividual() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: procesamientoApi.procesarGastoRecurrenteIndividual,
+    onSuccess: (data) => {
+      const result = data.data
+      const generated = result?.summary?.total_generated || 0
+      if (generated > 0) {
+        toast.success('Gasto procesado', {
+          description: 'Se generó el gasto para este mes',
+        })
+      } else {
+        toast.info('Sin cambios', {
+          description: 'El gasto ya fue procesado para este mes',
+        })
+      }
+      queryClient.invalidateQueries({ queryKey: ['gastos'] })
+      queryClient.invalidateQueries({ queryKey: ['gastos-recurrentes'] })
+    },
+    onError: (error: any) => {
+      toast.error('Error al procesar gasto', {
+        description: error.response?.data?.message || error.message,
+      })
+    },
+  })
+}
+
+export function useProcesarDebitoIndividual() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: procesamientoApi.procesarDebitoIndividual,
+    onSuccess: (data) => {
+      const result = data.data
+      const generated = result?.summary?.total_generated || 0
+      if (generated > 0) {
+        toast.success('Débito procesado', {
+          description: 'Se generó el gasto para este mes',
+        })
+      } else {
+        toast.info('Sin cambios', {
+          description: 'El débito ya fue procesado para este mes',
+        })
+      }
+      queryClient.invalidateQueries({ queryKey: ['gastos'] })
+      queryClient.invalidateQueries({ queryKey: ['debitos-automaticos'] })
+    },
+    onError: (error: any) => {
+      toast.error('Error al procesar débito', {
+        description: error.response?.data?.message || error.message,
+      })
+    },
+  })
+}

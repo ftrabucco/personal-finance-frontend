@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, Pencil, Trash2, Repeat, Power, PowerOff } from 'lucide-react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Plus, Pencil, Trash2, Repeat, Power, PowerOff, Play } from 'lucide-react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,18 +31,31 @@ import {
   useDeleteGastoRecurrente,
   useToggleGastoRecurrente,
 } from '@/lib/hooks/useGastosRecurrentes'
+import { useProcesarGastoRecurrenteIndividual } from '@/lib/hooks/useProcesamiento'
 import { formatCurrency } from '@/lib/utils/formatters'
 import type { GastoRecurrente } from '@/types'
 
-export default function GastosRecurrentesPage() {
+function GastosRecurrentesContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingGasto, setEditingGasto] = useState<GastoRecurrente | null>(null)
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Open dialog if ?new=true is in URL
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setEditingGasto(null)
+      setIsDialogOpen(true)
+      router.replace('/gastos-recurrentes', { scroll: false })
+    }
+  }, [searchParams, router])
 
   const { data: response, isLoading } = useGastosRecurrentes()
   const createMutation = useCreateGastoRecurrente()
   const updateMutation = useUpdateGastoRecurrente()
   const deleteMutation = useDeleteGastoRecurrente()
   const toggleMutation = useToggleGastoRecurrente()
+  const procesarMutation = useProcesarGastoRecurrenteIndividual()
 
   const gastos = response?.data || []
 
@@ -70,6 +84,14 @@ export default function GastosRecurrentesPage() {
       await toggleMutation.mutateAsync(id)
     } catch (error) {
       console.error('Error al cambiar estado:', error)
+    }
+  }
+
+  const handleProcesar = async (id: number) => {
+    try {
+      await procesarMutation.mutateAsync(id)
+    } catch (error) {
+      console.error('Error al procesar gasto:', error)
     }
   }
 
@@ -222,24 +244,38 @@ export default function GastosRecurrentesPage() {
                       </div>
                     </div>
                     <div className="flex justify-between items-center mt-2 pt-2 border-t">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8"
-                        onClick={() => handleToggle(gasto.id)}
-                      >
-                        {gasto.activo ? (
-                          <>
-                            <PowerOff className="h-4 w-4 mr-1 text-yellow-500" />
-                            Pausar
-                          </>
-                        ) : (
-                          <>
-                            <Power className="h-4 w-4 mr-1 text-green-500" />
-                            Activar
-                          </>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => handleToggle(gasto.id)}
+                        >
+                          {gasto.activo ? (
+                            <>
+                              <PowerOff className="h-4 w-4 mr-1 text-yellow-500" />
+                              Pausar
+                            </>
+                          ) : (
+                            <>
+                              <Power className="h-4 w-4 mr-1 text-green-500" />
+                              Activar
+                            </>
+                          )}
+                        </Button>
+                        {gasto.activo && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => handleProcesar(gasto.id)}
+                            disabled={procesarMutation.isPending}
+                          >
+                            <Play className="h-4 w-4 mr-1 text-blue-500" />
+                            Procesar
+                          </Button>
                         )}
-                      </Button>
+                      </div>
                       <div className="flex gap-2">
                         <Button
                           variant="ghost"
@@ -333,6 +369,17 @@ export default function GastosRecurrentesPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
+                            {gasto.activo && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleProcesar(gasto.id)}
+                                disabled={procesarMutation.isPending}
+                                title="Procesar este mes"
+                              >
+                                <Play className="h-4 w-4 text-blue-500" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -383,5 +430,13 @@ export default function GastosRecurrentesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+export default function GastosRecurrentesPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-8">Cargando...</div>}>
+      <GastosRecurrentesContent />
+    </Suspense>
   )
 }

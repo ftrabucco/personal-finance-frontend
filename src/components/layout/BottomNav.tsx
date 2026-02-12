@@ -23,10 +23,10 @@ const navItems = [
 ]
 
 const quickAddOptions = [
-  { name: 'Gasto Único', href: '/gastos-unicos', icon: Wallet, description: 'Un gasto puntual' },
-  { name: 'Compra en Cuotas', href: '/compras', icon: ShoppingCart, description: 'Pago en cuotas' },
-  { name: 'Gasto Recurrente', href: '/gastos-recurrentes', icon: Repeat, description: 'Se repite cada mes' },
-  { name: 'Débito Automático', href: '/debitos-automaticos', icon: CreditCard, description: 'Débito de cuenta' },
+  { name: 'Gasto Único', href: '/gastos-unicos?new=true', icon: Wallet, description: 'Un gasto puntual' },
+  { name: 'Compra en Cuotas', href: '/compras?new=true', icon: ShoppingCart, description: 'Pago en cuotas' },
+  { name: 'Gasto Recurrente', href: '/gastos-recurrentes?new=true', icon: Repeat, description: 'Se repite cada mes' },
+  { name: 'Débito Automático', href: '/debitos-automaticos?new=true', icon: CreditCard, description: 'Débito de cuenta' },
 ]
 
 export function BottomNav() {

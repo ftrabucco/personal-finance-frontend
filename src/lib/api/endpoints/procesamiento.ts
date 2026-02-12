@@ -73,4 +73,20 @@ export const procesamientoApi = {
     )
     return data
   },
+
+  // Procesar un gasto recurrente específico para el mes actual
+  procesarGastoRecurrenteIndividual: async (id: number) => {
+    const { data } = await apiClient.post<StandardResponse<ProcesamientoResult>>(
+      `/gastos-recurrentes/${id}/procesar`
+    )
+    return data
+  },
+
+  // Procesar un débito automático específico para el mes actual
+  procesarDebitoIndividual: async (id: number) => {
+    const { data } = await apiClient.post<StandardResponse<ProcesamientoResult>>(
+      `/debitos-automaticos/${id}/procesar`
+    )
+    return data
+  },
 }

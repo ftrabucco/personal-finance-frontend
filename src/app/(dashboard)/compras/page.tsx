@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, ShoppingCart } from 'lucide-react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
@@ -33,9 +34,20 @@ import { formatCurrency } from '@/lib/utils/formatters'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
 import type { Compra } from '@/types'
 
-export default function ComprasPage() {
+function ComprasContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCompra, setEditingCompra] = useState<Compra | null>(null)
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Open dialog if ?new=true is in URL
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setEditingCompra(null)
+      setIsDialogOpen(true)
+      router.replace('/compras', { scroll: false })
+    }
+  }, [searchParams, router])
 
   const { data: response, isLoading } = useCompras()
   const createMutation = useCreateCompra()
@@ -322,5 +334,13 @@ export default function ComprasPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+export default function ComprasPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-8">Cargando...</div>}>
+      <ComprasContent />
+    </Suspense>
   )
 }
