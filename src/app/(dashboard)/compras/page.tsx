@@ -174,36 +174,34 @@ function ComprasContent() {
               <div className="space-y-3 md:hidden">
                 {compras.map((compra) => (
                   <div key={compra.id} className="rounded-lg border p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          {compra.pendiente_cuotas ? (
-                            <Badge variant="warning" className="text-xs">Pendiente</Badge>
-                          ) : (
-                            <Badge variant="success" className="text-xs">Finalizada</Badge>
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(compra.fecha_compra), 'dd/MM/yyyy')}
-                          </span>
-                        </div>
-                        <p className="font-medium truncate">{compra.descripcion}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{compra.cantidad_cuotas} cuotas</span>
-                          {compra.tarjeta?.nombre && (
-                            <>
-                              <span>•</span>
-                              <span>{compra.tarjeta.nombre}</span>
-                            </>
-                          )}
-                        </div>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        {compra.pendiente_cuotas ? (
+                          <Badge variant="warning" className="text-xs">Pendiente</Badge>
+                        ) : (
+                          <Badge variant="success" className="text-xs">Finalizada</Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(compra.fecha_compra), 'dd/MM/yyyy')}
+                        </span>
                       </div>
-                      <div className="text-right shrink-0">
-                        <DualCurrencyDisplay
-                          montoArs={compra.monto_total_ars}
-                          montoUsd={compra.monto_total_usd}
-                          monedaOrigen={compra.moneda_origen}
-                          tipoCambio={compra.tipo_cambio_usado}
-                        />
+                      <DualCurrencyDisplay
+                        montoArs={compra.monto_total_ars}
+                        montoUsd={compra.monto_total_usd}
+                        monedaOrigen={compra.moneda_origen}
+                        tipoCambio={compra.tipo_cambio_usado}
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{compra.descripcion}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{compra.cantidad_cuotas} cuotas</span>
+                        {compra.tarjeta?.nombre && (
+                          <>
+                            <span>•</span>
+                            <span className="truncate">{compra.tarjeta.nombre}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="flex justify-end mt-2 pt-2 border-t gap-2">
