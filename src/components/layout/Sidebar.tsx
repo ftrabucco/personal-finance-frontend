@@ -6,31 +6,55 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   Home,
-  Receipt,
+  History,
   CreditCard,
   ShoppingCart,
   Repeat,
-  Wallet,
-  BarChart3,
+  PlusCircle,
+  TrendingUp,
+  Heart,
   User,
   LogOut,
   Moon,
   Sun,
+  Zap,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/lib/auth/authContext'
 import { Button } from '@/components/ui/button'
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: Home },
-  { name: 'Gastos', href: '/gastos', icon: Receipt },
-  { name: 'Gastos Únicos', href: '/gastos-unicos', icon: Wallet },
-  { name: 'Compras', href: '/compras', icon: ShoppingCart },
-  { name: 'Gastos Recurrentes', href: '/gastos-recurrentes', icon: Repeat },
-  { name: 'Débitos Automáticos', href: '/debitos-automaticos', icon: CreditCard },
-  { name: 'Tarjetas', href: '/tarjetas', icon: CreditCard },
-  { name: 'Reportes', href: '/reportes', icon: BarChart3 },
-  { name: 'Perfil', href: '/perfil', icon: User },
+// Navegación agrupada por secciones
+const navigationSections = [
+  {
+    title: null, // Sin título para el dashboard
+    items: [
+      { name: 'Dashboard', href: '/', icon: Home },
+    ],
+  },
+  {
+    title: 'Registro',
+    items: [
+      { name: 'Historial', href: '/gastos', icon: History },
+      { name: 'Nuevo Gasto', href: '/gastos-unicos', icon: PlusCircle },
+      { name: 'Cuotas', href: '/compras', icon: ShoppingCart },
+      { name: 'Pagos Fijos', href: '/gastos-recurrentes', icon: Repeat },
+      { name: 'Débitos', href: '/debitos-automaticos', icon: Zap },
+    ],
+  },
+  {
+    title: 'Finanzas',
+    items: [
+      { name: 'Tarjetas', href: '/tarjetas', icon: CreditCard },
+      { name: 'Proyecciones', href: '/proyecciones', icon: TrendingUp },
+      { name: 'Salud Financiera', href: '/salud-financiera', icon: Heart },
+    ],
+  },
+  {
+    title: null,
+    items: [
+      { name: 'Perfil', href: '/perfil', icon: User },
+    ],
+  },
 ]
 
 interface SidebarProps {
@@ -69,26 +93,37 @@ export function Sidebar({ onNavigate }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                'flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              <span>{item.name}</span>
-            </Link>
-          )
-        })}
+      <nav className="flex-1 p-4 overflow-y-auto">
+        {navigationSections.map((section, sectionIndex) => (
+          <div key={sectionIndex} className={section.title ? 'mt-4 first:mt-0' : ''}>
+            {section.title && (
+              <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {section.title}
+              </p>
+            )}
+            <div className="space-y-1">
+              {section.items.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={cn(
+                      'flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.name}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Theme toggle & Logout */}

@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useAllGastos, useDeleteGasto, useGenerateGastos } from '@/lib/hooks/useGastos'
 import { useCategorias } from '@/lib/hooks/useCatalogos'
-import { formatCurrency } from '@/lib/utils/formatters'
+import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
 import type { Gasto } from '@/types'
 
 const ITEMS_PER_PAGE = 20
@@ -246,7 +246,7 @@ export default function GastosPage() {
           </CardHeader>
           <CardContent>
             <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalGastos)}>
-              {formatCurrency(totalGastos)}
+              {formatCurrencyCompact(totalGastos)}
             </div>
             <p className="text-xs text-muted-foreground">
               {filteredGastos.length} gastos

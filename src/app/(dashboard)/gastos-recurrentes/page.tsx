@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Repeat, Power, PowerOff, Play } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, isSameMonth } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -32,7 +32,7 @@ import {
   useToggleGastoRecurrente,
 } from '@/lib/hooks/useGastosRecurrentes'
 import { useProcesarGastoRecurrenteIndividual } from '@/lib/hooks/useProcesamiento'
-import { formatCurrency } from '@/lib/utils/formatters'
+import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
 import type { GastoRecurrente } from '@/types'
 
 function GastosRecurrentesContent() {
@@ -70,11 +70,11 @@ function GastosRecurrentesContent() {
   }
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de eliminar este gasto recurrente?')) {
+    if (window.confirm('¿Estás seguro de eliminar este pago fijo?')) {
       try {
         await deleteMutation.mutateAsync(id)
       } catch (error) {
-        console.error('Error al eliminar gasto:', error)
+        console.error('Error al eliminar pago fijo:', error)
       }
     }
   }
@@ -113,6 +113,12 @@ function GastosRecurrentesContent() {
   }
 
   const gastosActivos = gastos.filter((g) => g.activo)
+
+  // Helper para determinar si ya se procesó este mes
+  const isProcesadoEsteMes = (ultimaFecha: string | null | undefined): boolean => {
+    if (!ultimaFecha) return false
+    return isSameMonth(new Date(ultimaFecha), new Date())
+  }
   const totalARS = gastosActivos.reduce(
     (sum, gasto) => sum + (Number(gasto.monto_ars) || 0),
     0
@@ -127,15 +133,15 @@ function GastosRecurrentesContent() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Gastos Recurrentes
+            Pagos Fijos
           </h1>
           <p className="text-sm text-muted-foreground md:text-base">
-            Gastos que se repiten según una frecuencia
+            Gastos manuales que se repiten (alquiler, expensas, gimnasio)
           </p>
         </div>
         <Button onClick={handleCreate} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
-          Nuevo Gasto
+          Nuevo Pago Fijo
         </Button>
       </div>
 
@@ -149,15 +155,15 @@ function GastosRecurrentesContent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalARS)}>
-                {formatCurrency(totalARS)}
+              <div className="text-lg sm:text-xl md:text-2xl font-bold" title={formatCurrency(totalARS)}>
+                {formatCurrencyCompact(totalARS)}
               </div>
-              <div className="text-sm text-muted-foreground truncate" title={`US$ ${Number(totalUSD).toFixed(2)}`}>
-                US$ {Number(totalUSD).toFixed(2)}
+              <div className="text-sm text-muted-foreground" title={`US$ ${Number(totalUSD).toFixed(2)}`}>
+                {formatCurrencyCompact(totalUSD, 'USD')}
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {gastosActivos.length} gastos activos
+              {gastosActivos.length} pagos activos
             </p>
           </CardContent>
         </Card>
@@ -195,15 +201,15 @@ function GastosRecurrentesContent() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Repeat className="h-5 w-5" />
-            Listado de Gastos Recurrentes
+            Listado de Pagos Fijos
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8">Cargando gastos...</div>
+            <div className="text-center py-8">Cargando pagos fijos...</div>
           ) : gastos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No hay gastos recurrentes registrados.
+              No hay pagos fijos registrados.
             </div>
           ) : (
             <>
@@ -213,9 +219,13 @@ function GastosRecurrentesContent() {
                   <div key={gasto.id} className="rounded-lg border p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           {gasto.activo ? (
-                            <Badge variant="success" className="text-xs">Activo</Badge>
+                            isProcesadoEsteMes(gasto.ultima_fecha_generado) ? (
+                              <Badge variant="success" className="text-xs">Pagado</Badge>
+                            ) : (
+                              <Badge variant="warning" className="text-xs">Pendiente</Badge>
+                            )
                           ) : (
                             <Badge variant="secondary" className="text-xs">Inactivo</Badge>
                           )}
@@ -347,7 +357,11 @@ function GastosRecurrentesContent() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {gasto.activo ? (
-                              <Badge variant="success">Activo</Badge>
+                              isProcesadoEsteMes(gasto.ultima_fecha_generado) ? (
+                                <Badge variant="success">Pagado</Badge>
+                              ) : (
+                                <Badge variant="warning">Pendiente</Badge>
+                              )
                             ) : (
                               <Badge variant="secondary">Inactivo</Badge>
                             )}
@@ -410,12 +424,12 @@ function GastosRecurrentesContent() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingGasto ? 'Editar Gasto Recurrente' : 'Nuevo Gasto Recurrente'}
+              {editingGasto ? 'Editar Pago Fijo' : 'Nuevo Pago Fijo'}
             </DialogTitle>
             <DialogDescription>
               {editingGasto
-                ? 'Modifica los datos del gasto recurrente'
-                : 'Completa el formulario para registrar un nuevo gasto recurrente'}
+                ? 'Modifica los datos del pago fijo'
+                : 'Completa el formulario para registrar un nuevo pago fijo'}
             </DialogDescription>
           </DialogHeader>
           <GastoRecurrenteForm

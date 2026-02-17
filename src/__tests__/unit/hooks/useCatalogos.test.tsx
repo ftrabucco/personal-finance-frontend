@@ -22,11 +22,9 @@ const mockCategorias = [
 ]
 
 const mockImportancias = [
-  { id: 1, nombre_importancia: 'Esencial' },
-  { id: 2, nombre_importancia: 'Importante' },
-  { id: 3, nombre_importancia: 'Nice to have' },
-  { id: 4, nombre_importancia: 'Prescindible' },
-  { id: 5, nombre_importancia: 'No debería' },
+  { id: 1, nombre_importancia: 'Necesario' },
+  { id: 2, nombre_importancia: 'Deseado' },
+  { id: 3, nombre_importancia: 'Prescindible' },
 ]
 
 const mockTiposPago = [
@@ -150,7 +148,7 @@ describe('Catálogos Hooks', () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
       expect(result.current.data?.data).toBeDefined()
-      expect(result.current.data?.data).toHaveLength(5)
+      expect(result.current.data?.data).toHaveLength(3)
     })
 
     it('should include expected importancias', async () => {
@@ -167,11 +165,9 @@ describe('Catálogos Hooks', () => {
       const importancias = result.current.data?.data || []
       const nombres = importancias.map((i) => i.nombre_importancia)
 
-      expect(nombres).toContain('Esencial')
-      expect(nombres).toContain('Importante')
-      expect(nombres).toContain('Nice to have')
+      expect(nombres).toContain('Necesario')
+      expect(nombres).toContain('Deseado')
       expect(nombres).toContain('Prescindible')
-      expect(nombres).toContain('No debería')
     })
 
     it('should have correct structure', async () => {

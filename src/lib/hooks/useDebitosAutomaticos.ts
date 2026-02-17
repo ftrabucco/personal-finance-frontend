@@ -20,6 +20,14 @@ export function useDebitoAutomatico(id: number) {
   })
 }
 
+export function useDebitosByTarjeta(tarjetaId: number) {
+  return useQuery({
+    queryKey: [QUERY_KEY, { tarjeta_id: tarjetaId }],
+    queryFn: () => debitosAutomaticosApi.getDebitosAutomaticos({ tarjeta_id: tarjetaId }),
+    enabled: !!tarjetaId,
+  })
+}
+
 export function useCreateDebitoAutomatico() {
   const queryClient = useQueryClient()
 

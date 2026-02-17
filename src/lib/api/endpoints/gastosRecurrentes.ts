@@ -3,8 +3,8 @@ import { apiClient } from '../client'
 import type { StandardResponse, GastoRecurrente } from '@/types'
 
 export const gastosRecurrentesApi = {
-  getGastosRecurrentes: async () => {
-    const { data } = await apiClient.get<StandardResponse<GastoRecurrente[]>>('/gastos-recurrentes')
+  getGastosRecurrentes: async (params?: { tarjeta_id?: number }) => {
+    const { data } = await apiClient.get<StandardResponse<GastoRecurrente[]>>('/gastos-recurrentes', { params })
     return data
   },
 
