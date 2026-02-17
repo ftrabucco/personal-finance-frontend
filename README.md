@@ -29,10 +29,35 @@ La aplicación estará disponible en [http://localhost:3000](http://localhost:30
 - Manejo de sesiones con JWT
 
 ### ✅ Dashboard
-- Vista principal con estadísticas
-- Sidebar con navegación completa
-- Header responsive
-- Cards de resumen
+- Vista principal con estadísticas del mes
+- Widgets de Salud Financiera y Proyecciones
+- Gráficos de gastos por categoría y tendencias
+- Actividad reciente
+- Sidebar con navegación agrupada por secciones:
+  - **Registro**: Historial, Nuevo Gasto, Cuotas, Suscripciones, Débitos
+  - **Finanzas**: Tarjetas, Proyecciones, Salud Financiera
+
+### ✅ Gestión de Tarjetas
+- CRUD completo de tarjetas (crédito, débito, virtual)
+- Vista detalle por tarjeta con todos los gastos asociados:
+  - Compras en cuotas
+  - Débitos automáticos
+  - Gastos recurrentes
+  - Gastos únicos
+- Resumen de compromisos mensuales por tarjeta
+
+### ✅ Gastos
+- Gastos únicos (one-time)
+- Gastos recurrentes (suscripciones) con frecuencias
+- Débitos automáticos
+- Compras en cuotas con seguimiento
+- Soporte multi-moneda (ARS/USD)
+- Badges de estado: Pagado/Pendiente/Inactivo para visualizar el estado del mes
+
+### ✅ Análisis Financiero
+- **Proyecciones**: Visualización de gastos futuros por mes
+- **Salud Financiera**: Score con métricas y recomendaciones
+- Gráficos interactivos con Recharts
 
 ## 🛠️ Stack Tecnológico
 
@@ -159,12 +184,13 @@ Endpoints principales:
 
 ## 🚧 Próximos Pasos
 
-- [ ] Implementar gestión de gastos
-- [ ] Implementar gestión de tarjetas
-- [ ] Implementar compras en cuotas
-- [ ] Agregar gráficos y reportes
+- [x] ~~Implementar gestión de gastos~~
+- [x] ~~Implementar gestión de tarjetas~~
+- [x] ~~Implementar compras en cuotas~~
+- [x] ~~Agregar gráficos y reportes~~
 - [ ] Implementar filtros avanzados
 - [ ] Agregar tests E2E
+- [ ] Internacionalización (i18n)
 
 ## 📄 Licencia
 

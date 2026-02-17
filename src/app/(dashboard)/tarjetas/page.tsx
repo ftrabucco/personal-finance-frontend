@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, CreditCard } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Plus, Pencil, Trash2, CreditCard, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -30,6 +31,7 @@ import {
 import type { Tarjeta } from '@/types'
 
 export default function TarjetasPage() {
+  const router = useRouter()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingTarjeta, setEditingTarjeta] = useState<Tarjeta | null>(null)
 
@@ -126,7 +128,8 @@ export default function TarjetasPage() {
                 {tarjetas.map((tarjeta) => (
                   <div
                     key={tarjeta.id}
-                    className="flex items-center justify-between rounded-lg border p-4"
+                    className="flex items-center justify-between rounded-lg border p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+                    onClick={() => router.push(`/tarjetas/${tarjeta.id}`)}
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -149,12 +152,15 @@ export default function TarjetasPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9"
-                        onClick={() => handleEdit(tarjeta)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEdit(tarjeta)
+                        }}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -162,10 +168,14 @@ export default function TarjetasPage() {
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9"
-                        onClick={() => handleDelete(tarjeta.id)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDelete(tarjeta.id)
+                        }}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
                     </div>
                   </div>
                 ))}
@@ -187,7 +197,11 @@ export default function TarjetasPage() {
                   </TableHeader>
                   <TableBody>
                     {tarjetas.map((tarjeta) => (
-                      <TableRow key={tarjeta.id}>
+                      <TableRow
+                        key={tarjeta.id}
+                        className="cursor-pointer hover:bg-accent/50"
+                        onClick={() => router.push(`/tarjetas/${tarjeta.id}`)}
+                      >
                         <TableCell className="font-medium">
                           {tarjeta.nombre}
                           {tarjeta.ultimos_4_digitos && (
@@ -224,14 +238,20 @@ export default function TarjetasPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleEdit(tarjeta)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEdit(tarjeta)
+                              }}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDelete(tarjeta.id)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDelete(tarjeta.id)
+                              }}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>

@@ -20,6 +20,14 @@ export function useGastoUnico(id: number) {
   })
 }
 
+export function useGastosUnicosByTarjeta(tarjetaId: number) {
+  return useQuery({
+    queryKey: [QUERY_KEY, { tarjeta_id: tarjetaId }],
+    queryFn: () => gastosApi.getGastosUnicos({ tarjeta_id: tarjetaId }),
+    enabled: !!tarjetaId,
+  })
+}
+
 export function useCreateGastoUnico() {
   const queryClient = useQueryClient()
 

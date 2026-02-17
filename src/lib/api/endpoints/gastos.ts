@@ -45,8 +45,8 @@ export const gastosApi = {
   },
 
   // Gastos únicos
-  getGastosUnicos: async () => {
-    const { data } = await apiClient.get<StandardResponse<GastoUnico[]>>('/gastos-unicos')
+  getGastosUnicos: async (params?: { tarjeta_id?: number }) => {
+    const { data } = await apiClient.get<StandardResponse<GastoUnico[]>>('/gastos-unicos', { params })
     return data
   },
 

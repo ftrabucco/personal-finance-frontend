@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, CreditCard, Power, PowerOff, Play } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, isSameMonth } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -32,7 +32,7 @@ import {
   useToggleDebitoAutomatico,
 } from '@/lib/hooks/useDebitosAutomaticos'
 import { useProcesarDebitoIndividual } from '@/lib/hooks/useProcesamiento'
-import { formatCurrency } from '@/lib/utils/formatters'
+import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
 import type { DebitoAutomatico } from '@/types'
 
 function DebitosAutomaticosContent() {
@@ -113,6 +113,12 @@ function DebitosAutomaticosContent() {
   }
 
   const debitosActivos = debitos.filter((d) => d.activo)
+
+  // Helper para determinar si ya se procesó este mes
+  const isProcesadoEsteMes = (ultimaFecha: string | null | undefined): boolean => {
+    if (!ultimaFecha) return false
+    return isSameMonth(new Date(ultimaFecha), new Date())
+  }
   const totalARS = debitosActivos.reduce(
     (sum, debito) => sum + (Number(debito.monto_ars) || 0),
     0
@@ -149,11 +155,11 @@ function DebitosAutomaticosContent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalARS)}>
-                {formatCurrency(totalARS)}
+              <div className="text-lg sm:text-xl md:text-2xl font-bold" title={formatCurrency(totalARS)}>
+                {formatCurrencyCompact(totalARS)}
               </div>
-              <div className="text-sm text-muted-foreground truncate" title={`US$ ${Number(totalUSD).toFixed(2)}`}>
-                US$ {Number(totalUSD).toFixed(2)}
+              <div className="text-sm text-muted-foreground" title={`US$ ${Number(totalUSD).toFixed(2)}`}>
+                {formatCurrencyCompact(totalUSD, 'USD')}
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
@@ -213,9 +219,13 @@ function DebitosAutomaticosContent() {
                   <div key={debito.id} className="rounded-lg border p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           {debito.activo ? (
-                            <Badge variant="success" className="text-xs">Activo</Badge>
+                            isProcesadoEsteMes(debito.ultima_fecha_generado) ? (
+                              <Badge variant="success" className="text-xs">Pagado</Badge>
+                            ) : (
+                              <Badge variant="warning" className="text-xs">Pendiente</Badge>
+                            )
                           ) : (
                             <Badge variant="secondary" className="text-xs">Inactivo</Badge>
                           )}
@@ -344,7 +354,11 @@ function DebitosAutomaticosContent() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {debito.activo ? (
-                              <Badge variant="success">Activo</Badge>
+                              isProcesadoEsteMes(debito.ultima_fecha_generado) ? (
+                                <Badge variant="success">Pagado</Badge>
+                              ) : (
+                                <Badge variant="warning">Pendiente</Badge>
+                              )
                             ) : (
                               <Badge variant="secondary">Inactivo</Badge>
                             )}

@@ -20,6 +20,14 @@ export function useGastoRecurrente(id: number) {
   })
 }
 
+export function useRecurrentesByTarjeta(tarjetaId: number) {
+  return useQuery({
+    queryKey: [QUERY_KEY, { tarjeta_id: tarjetaId }],
+    queryFn: () => gastosRecurrentesApi.getGastosRecurrentes({ tarjeta_id: tarjetaId }),
+    enabled: !!tarjetaId,
+  })
+}
+
 export function useCreateGastoRecurrente() {
   const queryClient = useQueryClient()
 

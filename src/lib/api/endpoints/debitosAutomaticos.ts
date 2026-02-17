@@ -3,8 +3,8 @@ import { apiClient } from '../client'
 import type { StandardResponse, DebitoAutomatico } from '@/types'
 
 export const debitosAutomaticosApi = {
-  getDebitosAutomaticos: async () => {
-    const { data } = await apiClient.get<StandardResponse<DebitoAutomatico[]>>('/debitos-automaticos')
+  getDebitosAutomaticos: async (params?: { tarjeta_id?: number }) => {
+    const { data } = await apiClient.get<StandardResponse<DebitoAutomatico[]>>('/debitos-automaticos', { params })
     return data
   },
 

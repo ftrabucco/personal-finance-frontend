@@ -30,7 +30,7 @@ import {
   useUpdateCompra,
   useDeleteCompra,
 } from '@/lib/hooks/useCompras'
-import { formatCurrency } from '@/lib/utils/formatters'
+import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
 import type { Compra } from '@/types'
 
@@ -122,7 +122,7 @@ function ComprasContent() {
             <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalARS)}>{formatCurrency(totalARS)}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold" title={formatCurrency(totalARS)}>{formatCurrencyCompact(totalARS)}</div>
             <p className="text-xs text-muted-foreground">Compras en pesos</p>
           </CardContent>
         </Card>
@@ -133,7 +133,7 @@ function ComprasContent() {
             <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={`US$ ${totalUSD.toFixed(2)}`}>US$ {totalUSD.toFixed(2)}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold" title={`US$ ${totalUSD.toFixed(2)}`}>{formatCurrencyCompact(totalUSD, 'USD')}</div>
             <p className="text-xs text-muted-foreground">Compras en dólares</p>
           </CardContent>
         </Card>

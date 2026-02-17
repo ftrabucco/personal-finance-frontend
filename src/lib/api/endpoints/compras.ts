@@ -3,8 +3,8 @@ import { apiClient } from '../client'
 import type { StandardResponse, Compra } from '@/types'
 
 export const comprasApi = {
-  getCompras: async () => {
-    const { data } = await apiClient.get<StandardResponse<Compra[]>>('/compras')
+  getCompras: async (params?: { tarjeta_id?: number }) => {
+    const { data } = await apiClient.get<StandardResponse<Compra[]>>('/compras', { params })
     return data
   },
 

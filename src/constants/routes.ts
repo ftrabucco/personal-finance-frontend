@@ -14,6 +14,8 @@ export const ROUTES = {
   DEBITOS_AUTOMATICOS: '/debitos-automaticos',
   TARJETAS: '/tarjetas',
   REPORTES: '/reportes',
+  PROYECCIONES: '/proyecciones',
+  SALUD_FINANCIERA: '/salud-financiera',
   PERFIL: '/perfil',
 } as const
 

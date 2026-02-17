@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { useAuth } from '@/lib/auth/authContext'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   Card,
   CardContent,
@@ -22,6 +23,8 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Heart,
+  Calendar,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTarjetas } from '@/lib/hooks/useTarjetas'
@@ -31,7 +34,8 @@ import { useGastosRecurrentes } from '@/lib/hooks/useGastosRecurrentes'
 import { useDebitosAutomaticos } from '@/lib/hooks/useDebitosAutomaticos'
 import { useProcesarTodosPendientes } from '@/lib/hooks/useProcesamiento'
 import { useTipoCambioActual, useActualizarTipoCambio } from '@/lib/hooks/useTipoCambio'
-import { formatCurrency } from '@/lib/utils/formatters'
+import { useSaludFinanciera, useProyeccion } from '@/lib/hooks/useAnalisis'
+import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 import {
@@ -50,6 +54,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d'
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const router = useRouter()
 
   const { data: tarjetasResponse } = useTarjetas()
   const { data: gastosResponse } = useAllGastos()
@@ -59,6 +64,8 @@ export default function DashboardPage() {
   const procesarPendientes = useProcesarTodosPendientes()
   const { data: tipoCambioResponse, isError: tipoCambioError } = useTipoCambioActual()
   const actualizarTipoCambio = useActualizarTipoCambio()
+  const { data: saludResponse } = useSaludFinanciera('mes')
+  const { data: proyeccionResponse } = useProyeccion(1)
 
   const tarjetas = tarjetasResponse?.data || []
   const gastos = gastosResponse?.data || []
@@ -271,7 +278,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalGastosDelMes)}>
-              {formatCurrency(totalGastosDelMes)}
+              {formatCurrencyCompact(totalGastosDelMes)}
             </div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               {diferenciaPorcentual > 0 ? (
@@ -327,11 +334,106 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(gastosFijosProyectados)}>
-              {formatCurrency(gastosFijosProyectados)}
+              {formatCurrencyCompact(gastosFijosProyectados)}
             </div>
             <p className="text-xs text-muted-foreground">
               {gastosRecurrentesActivos} recurrentes, {debitosActivos} débitos
             </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Insights - Salud Financiera y Proyecciones */}
+      <div className="grid gap-3 md:gap-4 md:grid-cols-2">
+        {/* Salud Financiera Widget */}
+        <Card
+          className="cursor-pointer hover:bg-accent/50 transition-colors"
+          onClick={() => router.push('/salud-financiera')}
+        >
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Heart className="h-5 w-5 text-rose-500" />
+                  <span className="text-sm text-muted-foreground">Salud Financiera</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-bold">
+                    {saludResponse?.data?.score ?? '--'}
+                  </span>
+                  {saludResponse?.data?.calificacion && (
+                    <Badge
+                      variant={
+                        saludResponse.data.score >= 75
+                          ? 'default'
+                          : saludResponse.data.score >= 50
+                            ? 'secondary'
+                            : 'destructive'
+                      }
+                    >
+                      {saludResponse.data.calificacion}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ver análisis completo →
+                </p>
+              </div>
+              <div className="relative h-16 w-16">
+                <svg className="h-16 w-16 -rotate-90" viewBox="0 0 36 36">
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15.5"
+                    fill="none"
+                    className="stroke-muted"
+                    strokeWidth="3"
+                  />
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15.5"
+                    fill="none"
+                    className={
+                      (saludResponse?.data?.score ?? 0) >= 75
+                        ? 'stroke-green-500'
+                        : (saludResponse?.data?.score ?? 0) >= 50
+                          ? 'stroke-yellow-500'
+                          : 'stroke-red-500'
+                    }
+                    strokeWidth="3"
+                    strokeDasharray={`${((saludResponse?.data?.score ?? 0) / 100) * 97.5} 97.5`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Proyección Widget */}
+        <Card
+          className="cursor-pointer hover:bg-accent/50 transition-colors"
+          onClick={() => router.push('/proyecciones')}
+        >
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="h-5 w-5 text-blue-500" />
+                  <span className="text-sm text-muted-foreground">Próximo Mes</span>
+                </div>
+                <p className="text-2xl font-bold truncate" title={proyeccionResponse?.data?.proyeccion?.[0] ? formatCurrency(proyeccionResponse.data.proyeccion[0].total_ars) : undefined}>
+                  {proyeccionResponse?.data?.proyeccion?.[0]
+                    ? formatCurrencyCompact(proyeccionResponse.data.proyeccion[0].total_ars)
+                    : '--'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {proyeccionResponse?.data?.proyeccion?.[0]?.cantidad_gastos ?? 0} gastos proyectados →
+                </p>
+              </div>
+              <TrendingUp className="h-10 w-10 text-muted-foreground" />
+            </div>
           </CardContent>
         </Card>
       </div>

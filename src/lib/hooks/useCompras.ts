@@ -20,6 +20,14 @@ export function useCompra(id: number) {
   })
 }
 
+export function useComprasByTarjeta(tarjetaId: number) {
+  return useQuery({
+    queryKey: [QUERY_KEY, { tarjeta_id: tarjetaId }],
+    queryFn: () => comprasApi.getCompras({ tarjeta_id: tarjetaId }),
+    enabled: !!tarjetaId,
+  })
+}
+
 export function useCreateCompra() {
   const queryClient = useQueryClient()
 
