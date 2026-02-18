@@ -55,7 +55,7 @@ export function GastoUnicoForm({
     resolver: zodResolver(gastoUnicoSchema),
     defaultValues: {
       descripcion: initialData?.descripcion || '',
-      monto: initialData?.monto || 0,
+      monto: Number(initialData?.monto) || 0,
       moneda_origen: initialData?.moneda_origen || 'ARS',
       fecha: initialData?.fecha
         ? format(new Date(initialData.fecha), 'yyyy-MM-dd')
