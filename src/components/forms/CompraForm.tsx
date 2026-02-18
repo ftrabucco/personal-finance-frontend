@@ -57,12 +57,12 @@ export function CompraForm({
     resolver: zodResolver(compraSchema),
     defaultValues: {
       descripcion: initialData?.descripcion || '',
-      monto_total: initialData?.monto_total || 0,
+      monto_total: Number(initialData?.monto_total) || 0,
       moneda_origen: (initialData?.moneda_origen as Moneda) || 'ARS',
       fecha_compra: initialData?.fecha_compra
         ? format(new Date(initialData.fecha_compra), 'yyyy-MM-dd')
         : format(new Date(), 'yyyy-MM-dd'),
-      cantidad_cuotas: initialData?.cantidad_cuotas || 1,
+      cantidad_cuotas: Number(initialData?.cantidad_cuotas) || 1,
       categoria_gasto_id: initialData?.categoria_gasto_id,
       importancia_gasto_id: initialData?.importancia_gasto_id,
       tipo_pago_id: initialData?.tipo_pago_id,

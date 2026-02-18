@@ -59,8 +59,8 @@ export function DebitoAutomaticoForm({
     resolver: zodResolver(debitoAutomaticoSchema),
     defaultValues: {
       descripcion: initialData?.descripcion || '',
-      monto: initialData?.monto || 0,
-      dia_de_pago: initialData?.dia_de_pago || 1,
+      monto: Number(initialData?.monto) || 0,
+      dia_de_pago: Number(initialData?.dia_de_pago) || 1,
       activo: initialData?.activo ?? true,
       categoria_gasto_id: initialData?.categoria_gasto_id,
       importancia_gasto_id: initialData?.importancia_gasto_id,

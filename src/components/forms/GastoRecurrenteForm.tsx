@@ -70,9 +70,9 @@ export function GastoRecurrenteForm({
     resolver: zodResolver(gastoRecurrenteSchema),
     defaultValues: {
       descripcion: initialData?.descripcion || '',
-      monto: initialData?.monto || 0,
+      monto: Number(initialData?.monto) || 0,
       moneda_origen: initialData?.moneda_origen || 'ARS',
-      dia_de_pago: initialData?.dia_de_pago || 1,
+      dia_de_pago: Number(initialData?.dia_de_pago) || 1,
       mes_de_pago: initialData?.mes_de_pago || null,
       activo: initialData?.activo ?? true,
       fecha_inicio: initialData?.fecha_inicio
