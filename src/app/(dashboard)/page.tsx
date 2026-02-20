@@ -583,11 +583,17 @@ export default function DashboardPage() {
                         ))}
                       </Pie>
                       <Tooltip
-                        formatter={(value: number) => formatCurrency(value)}
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null
+                          const data = payload[0].payload
+                          return (
+                            <div className="bg-card border rounded-lg p-2 shadow-lg">
+                              <p className="font-medium">{data.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {formatCurrency(data.value)}
+                              </p>
+                            </div>
+                          )
                         }}
                       />
                     </PieChart>
