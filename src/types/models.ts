@@ -186,3 +186,51 @@ export interface TipoCambio {
 
 // Enum para monedas
 export type Moneda = 'ARS' | 'USD'
+
+// Fuente de Ingreso (catálogo)
+export interface FuenteIngreso {
+  id: number
+  nombre: string
+}
+
+// Ingreso Único
+export interface IngresoUnico {
+  id: number
+  descripcion: string
+  monto: number
+  moneda_origen: Moneda
+  monto_ars: number
+  monto_usd: number
+  tipo_cambio_usado: number
+  fecha: string
+  fuente_ingreso_id: number
+  usuario_id: number
+  created_at: string
+  updated_at: string
+  // Relaciones
+  fuenteIngreso?: FuenteIngreso
+}
+
+// Ingreso Recurrente
+export interface IngresoRecurrente {
+  id: number
+  descripcion: string
+  monto: number
+  moneda_origen: Moneda
+  monto_ars: number
+  monto_usd: number
+  tipo_cambio_referencia: number
+  dia_de_pago: number
+  mes_de_pago: number | null
+  activo: boolean
+  fecha_inicio: string | null
+  fecha_fin: string | null
+  fuente_ingreso_id: number
+  frecuencia_gasto_id: number
+  usuario_id: number
+  created_at: string
+  updated_at: string
+  // Relaciones
+  fuenteIngreso?: FuenteIngreso
+  frecuencia?: Frecuencia
+}

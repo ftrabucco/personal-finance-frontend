@@ -18,6 +18,8 @@ import {
   Moon,
   Sun,
   Zap,
+  Wallet,
+  CalendarDays,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/lib/auth/authContext'
@@ -39,6 +41,13 @@ const navigationSections = [
       { name: 'Cuotas', href: '/compras', icon: ShoppingCart },
       { name: 'Pagos Fijos', href: '/gastos-recurrentes', icon: Repeat },
       { name: 'Débitos', href: '/debitos-automaticos', icon: Zap },
+    ],
+  },
+  {
+    title: 'Ingresos',
+    items: [
+      { name: 'Ingreso Único', href: '/ingresos-unicos', icon: Wallet },
+      { name: 'Ingresos Fijos', href: '/ingresos-recurrentes', icon: CalendarDays },
     ],
   },
   {

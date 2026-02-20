@@ -1,7 +1,7 @@
 // src/lib/hooks/useCatalogos.ts
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api/client'
-import type { Categoria, Importancia, TipoPago, Frecuencia } from '@/types'
+import type { Categoria, Importancia, TipoPago, Frecuencia, FuenteIngreso } from '@/types'
 
 // Types for API response
 interface CatalogosResponse {
@@ -11,6 +11,7 @@ interface CatalogosResponse {
     importancias: Importancia[]
     tiposPago: TipoPago[]
     frecuencias: Frecuencia[]
+    fuentesIngreso: FuenteIngreso[]
   }
 }
 
@@ -43,6 +44,11 @@ async function fetchTiposPago(): Promise<TipoPago[]> {
 
 async function fetchFrecuencias(): Promise<Frecuencia[]> {
   const response = await apiClient.get<SingleCatalogResponse<Frecuencia>>('/catalogos/frecuencias')
+  return response.data.data
+}
+
+async function fetchFuentesIngreso(): Promise<FuenteIngreso[]> {
+  const response = await apiClient.get<SingleCatalogResponse<FuenteIngreso>>('/catalogos/fuentes-ingreso')
   return response.data.data
 }
 
@@ -86,6 +92,16 @@ export function useFrecuencias() {
   })
 }
 
+export function useFuentesIngreso() {
+  return useQuery({
+    queryKey: ['catalogos', 'fuentes-ingreso'],
+    queryFn: fetchFuentesIngreso,
+    staleTime: 1000 * 60 * 60,
+    gcTime: 1000 * 60 * 60 * 24,
+    select: (data) => ({ data }),
+  })
+}
+
 // Hook combinado para cargar todos los catálogos de una vez (más eficiente)
 export function useCatalogosCompletos() {
   const query = useQuery({
@@ -113,6 +129,11 @@ export function useCatalogosCompletos() {
     },
     frecuencias: {
       data: query.data ? { data: query.data.frecuencias } : undefined,
+      isLoading: query.isLoading,
+      isError: query.isError,
+    },
+    fuentesIngreso: {
+      data: query.data ? { data: query.data.fuentesIngreso } : undefined,
       isLoading: query.isLoading,
       isError: query.isError,
     },
