@@ -447,8 +447,18 @@ export function DiaDePagoField<T extends FieldValues>({
               min="1"
               max="31"
               placeholder="1-31"
-              {...field}
-              onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+              value={field.value || ''}
+              onChange={(e) => {
+                const value = e.target.value
+                field.onChange(value === '' ? '' : parseInt(value))
+              }}
+              onBlur={(e) => {
+                // On blur, ensure a valid value (default to 1 if empty or invalid)
+                const value = parseInt(e.target.value)
+                if (!value || value < 1 || value > 31) {
+                  field.onChange(1)
+                }
+              }}
             />
           </FormControl>
           <FormDescription>{description}</FormDescription>
