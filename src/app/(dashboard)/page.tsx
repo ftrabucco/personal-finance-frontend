@@ -35,6 +35,8 @@ import { useDebitosAutomaticos } from '@/lib/hooks/useDebitosAutomaticos'
 import { useProcesarTodosPendientes } from '@/lib/hooks/useProcesamiento'
 import { useTipoCambioActual, useActualizarTipoCambio } from '@/lib/hooks/useTipoCambio'
 import { useSaludFinanciera, useProyeccion } from '@/lib/hooks/useAnalisis'
+import { useIngresosUnicos } from '@/lib/hooks/useIngresosUnicos'
+import { useIngresosRecurrentes } from '@/lib/hooks/useIngresosRecurrentes'
 import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -66,8 +68,12 @@ export default function DashboardPage() {
   const actualizarTipoCambio = useActualizarTipoCambio()
   const { data: saludResponse } = useSaludFinanciera('mes')
   const { data: proyeccionResponse } = useProyeccion(1)
+  const { data: ingresosUnicosResponse } = useIngresosUnicos()
+  const { data: ingresosRecurrentesResponse } = useIngresosRecurrentes()
 
   const tarjetas = tarjetasResponse?.data || []
+  const ingresosUnicos = ingresosUnicosResponse?.data || []
+  const ingresosRecurrentes = ingresosRecurrentesResponse?.data || []
   const gastos = gastosResponse?.data || []
   const compras = comprasResponse?.data || []
   const gastosRecurrentes = gastosRecurrentesResponse?.data || []
@@ -121,6 +127,39 @@ export default function DashboardPage() {
     ? ((totalGastosDelMes - totalGastosDelMesAnterior) / totalGastosDelMesAnterior) * 100
     : 0
 
+  // Calcular ingresos del mes actual
+  const ingresosUnicosDelMes = useMemo(() =>
+    ingresosUnicos.filter((ingreso) => {
+      const fecha = new Date(ingreso.fecha)
+      return fecha >= startOfCurrentMonth && fecha <= endOfCurrentMonth
+    }),
+    [ingresosUnicos, startOfCurrentMonth, endOfCurrentMonth]
+  )
+
+  const totalIngresosUnicosDelMes = ingresosUnicosDelMes.reduce(
+    (sum, ingreso) => sum + parseFloat(String(ingreso.monto_ars || 0)),
+    0
+  )
+
+  // Ingresos recurrentes activos (estimado mensual)
+  const totalIngresosRecurrentesMensual = useMemo(() =>
+    ingresosRecurrentes
+      .filter((i) => i.activo)
+      .reduce((sum, i) => sum + parseFloat(String(i.monto_ars || 0)), 0),
+    [ingresosRecurrentes]
+  )
+
+  // Total ingresos del mes (únicos + recurrentes activos)
+  const totalIngresosDelMes = totalIngresosUnicosDelMes + totalIngresosRecurrentesMensual
+
+  // Balance neto
+  const balanceNeto = totalIngresosDelMes - totalGastosDelMes
+
+  // Tasa de ahorro
+  const tasaAhorro = totalIngresosDelMes > 0
+    ? (balanceNeto / totalIngresosDelMes) * 100
+    : 0
+
   // Gastos por categoría del mes actual
   const gastosPorCategoria = useMemo(() => {
     const categoriaMap = new Map<string, number>()
@@ -147,28 +186,41 @@ export default function DashboardPage() {
     return top5
   }, [gastosPorCategoria])
 
-  // Datos para el gráfico de barras (últimos 4 meses)
-  const gastosPorMes = useMemo(() => {
+  // Datos para el gráfico de barras (últimos 4 meses) - Gastos vs Ingresos
+  const balancePorMes = useMemo(() => {
     const meses = []
     for (let i = 3; i >= 0; i--) {
       const mesDate = subMonths(now, i)
       const inicio = startOfMonth(mesDate)
       const fin = endOfMonth(mesDate)
 
-      const total = gastos
+      const totalGastos = gastos
         .filter((g) => {
           const fecha = new Date(g.fecha)
           return fecha >= inicio && fecha <= fin
         })
         .reduce((sum, g) => sum + parseFloat(g.monto_ars), 0)
 
+      const totalIngresosU = ingresosUnicos
+        .filter((i) => {
+          const fecha = new Date(i.fecha)
+          return fecha >= inicio && fecha <= fin
+        })
+        .reduce((sum, i) => sum + parseFloat(String(i.monto_ars || 0)), 0)
+
+      // Para ingresos recurrentes, asumimos que aplican a todos los meses si están activos
+      const totalIngresosR = ingresosRecurrentes
+        .filter((i) => i.activo)
+        .reduce((sum, i) => sum + parseFloat(String(i.monto_ars || 0)), 0)
+
       meses.push({
         mes: format(mesDate, 'MMM', { locale: es }),
-        total,
+        gastos: totalGastos,
+        ingresos: totalIngresosU + totalIngresosR,
       })
     }
     return meses
-  }, [gastos, now])
+  }, [gastos, ingresosUnicos, ingresosRecurrentes, now])
 
   const comprasPendientes = compras.filter((c) => c.pendiente_cuotas).length
   const gastosRecurrentesActivos = gastosRecurrentes.filter((g) => g.activo).length
@@ -343,6 +395,69 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* Income & Balance Cards */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Ingresos del Mes
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-500 shrink-0" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate text-green-600" title={formatCurrency(totalIngresosDelMes)}>
+              {formatCurrencyCompact(totalIngresosDelMes)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {ingresosRecurrentes.filter(i => i.activo).length} fijos + {ingresosUnicosDelMes.length} únicos
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Balance Neto
+            </CardTitle>
+            {balanceNeto >= 0 ? (
+              <TrendingUp className="h-4 w-4 text-green-500 shrink-0" />
+            ) : (
+              <TrendingDown className="h-4 w-4 text-red-500 shrink-0" />
+            )}
+          </CardHeader>
+          <CardContent>
+            <div
+              className={`text-lg sm:text-xl md:text-2xl font-bold truncate ${balanceNeto >= 0 ? 'text-green-600' : 'text-red-600'}`}
+              title={formatCurrency(Math.abs(balanceNeto))}
+            >
+              {balanceNeto >= 0 ? '+' : '-'}{formatCurrencyCompact(Math.abs(balanceNeto))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Ingresos - Gastos
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Tasa de Ahorro
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
+          </CardHeader>
+          <CardContent>
+            <div
+              className={`text-lg sm:text-xl md:text-2xl font-bold ${tasaAhorro >= 20 ? 'text-green-600' : tasaAhorro >= 0 ? 'text-yellow-600' : 'text-red-600'}`}
+            >
+              {tasaAhorro.toFixed(1)}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {tasaAhorro >= 20 ? 'Excelente' : tasaAhorro >= 10 ? 'Bueno' : tasaAhorro >= 0 ? 'Ajustado' : 'Déficit'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Quick Insights - Salud Financiera y Proyecciones */}
       <div className="grid gap-3 md:gap-4 md:grid-cols-2">
         {/* Salud Financiera Widget */}
@@ -501,19 +616,19 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Evolución Mensual - Bar Chart */}
+        {/* Evolución Mensual - Bar Chart Ingresos vs Gastos */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Evolución Mensual</CardTitle>
+            <CardTitle className="text-lg">Ingresos vs Gastos</CardTitle>
             <CardDescription>
-              Gastos de los últimos 4 meses
+              Comparación de los últimos 4 meses
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {gastosPorMes.some(m => m.total > 0) ? (
+            {balancePorMes.some(m => m.gastos > 0 || m.ingresos > 0) ? (
               <div className="h-[200px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={gastosPorMes}>
+                  <BarChart data={balancePorMes}>
                     <XAxis
                       dataKey="mes"
                       tick={{ fontSize: 12 }}
@@ -527,7 +642,10 @@ export default function DashboardPage() {
                       tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
                     />
                     <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
+                      formatter={(value: number, name: string) => [
+                        formatCurrency(value),
+                        name === 'ingresos' ? 'Ingresos' : 'Gastos'
+                      ]}
                       contentStyle={{
                         backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
@@ -535,9 +653,16 @@ export default function DashboardPage() {
                       }}
                     />
                     <Bar
-                      dataKey="total"
-                      fill="hsl(var(--primary))"
+                      dataKey="ingresos"
+                      fill="#22c55e"
                       radius={[4, 4, 0, 0]}
+                      name="ingresos"
+                    />
+                    <Bar
+                      dataKey="gastos"
+                      fill="#ef4444"
+                      radius={[4, 4, 0, 0]}
+                      name="gastos"
                     />
                   </BarChart>
                 </ResponsiveContainer>

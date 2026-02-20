@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select'
 import { CurrencySelector } from '@/components/forms/CurrencySelector'
 import { formatCurrency } from '@/lib/utils/formatters'
-import type { Categoria, Importancia, TipoPago, Tarjeta, Frecuencia, Moneda } from '@/types'
+import type { Categoria, Importancia, TipoPago, Tarjeta, Frecuencia, Moneda, FuenteIngreso } from '@/types'
 
 // ============================================
 // Descripcion Field
@@ -538,6 +538,51 @@ export function CantidadCuotasField<T extends FieldValues>({
               ? `${formatCurrency(montoPorCuota)} (≈ US$ ${cuotaConvertida.toFixed(2)})`
               : `US$ ${montoPorCuota.toFixed(2)} (≈ ${formatCurrency(cuotaConvertida)})`}
           </FormDescription>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  )
+}
+
+// ============================================
+// Fuente de Ingreso Select Field
+// ============================================
+interface FuenteIngresoFieldProps<T extends FieldValues> {
+  control: Control<T>
+  name: FieldPath<T>
+  fuentesIngreso: FuenteIngreso[]
+}
+
+export function FuenteIngresoField<T extends FieldValues>({
+  control,
+  name,
+  fuentesIngreso,
+}: FuenteIngresoFieldProps<T>) {
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Fuente de Ingreso</FormLabel>
+          <Select
+            onValueChange={(value) => field.onChange(parseInt(value))}
+            value={field.value?.toString()}
+          >
+            <FormControl>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar fuente" />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent>
+              {fuentesIngreso.map((fuente) => (
+                <SelectItem key={fuente.id} value={fuente.id.toString()}>
+                  {fuente.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <FormMessage />
         </FormItem>
       )}

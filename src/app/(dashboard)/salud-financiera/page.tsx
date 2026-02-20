@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Card,
   CardContent,
@@ -27,11 +27,20 @@ import {
   RefreshCcw,
   PieChart,
   Lightbulb,
+  Wallet,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  PiggyBank,
+  Shield,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useSaludFinanciera } from '@/lib/hooks/useAnalisis'
+import { useIngresosUnicos } from '@/lib/hooks/useIngresosUnicos'
+import { useIngresosRecurrentes } from '@/lib/hooks/useIngresosRecurrentes'
+import { useFrecuencias } from '@/lib/hooks/useCatalogos'
 import type { PeriodoSaludFinanciera } from '@/lib/api/endpoints/analisis'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, parseISO, isWithinInterval } from 'date-fns'
 
 // Score color based on value
 const getScoreColor = (score: number) => {
@@ -75,12 +84,133 @@ const periodLabels: Record<PeriodoSaludFinanciera, string> = {
   anio: 'Este año',
 }
 
+// Helper para obtener rango de fechas según período
+function getPeriodoRange(periodo: PeriodoSaludFinanciera): { start: Date; end: Date } {
+  const now = new Date()
+  switch (periodo) {
+    case 'semana':
+      return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) }
+    case 'mes':
+      return { start: startOfMonth(now), end: endOfMonth(now) }
+    case 'trimestre':
+      return { start: startOfQuarter(now), end: endOfQuarter(now) }
+    case 'anio':
+      return { start: startOfYear(now), end: endOfYear(now) }
+  }
+}
+
+// Helper para calcular ingresos recurrentes en un período
+function calcularIngresosRecurrentesPeriodo(
+  ingresosRecurrentes: any[],
+  frecuencias: any[],
+  periodo: PeriodoSaludFinanciera
+): number {
+  let total = 0
+  const { start, end } = getPeriodoRange(periodo)
+
+  ingresosRecurrentes.filter(ing => ing.activo).forEach(ingreso => {
+    const frecuencia = frecuencias.find(f => f.id === ingreso.frecuencia_gasto_id)
+    const frecNombre = frecuencia?.nombre_frecuencia?.toLowerCase() || 'mensual'
+
+    // Verificar fechas de vigencia
+    const fechaInicio = ingreso.fecha_inicio ? parseISO(ingreso.fecha_inicio) : null
+    const fechaFin = ingreso.fecha_fin ? parseISO(ingreso.fecha_fin) : null
+
+    if (fechaInicio && fechaInicio > end) return
+    if (fechaFin && fechaFin < start) return
+
+    const montoArs = ingreso.monto_ars || 0
+
+    // Calcular según frecuencia y período
+    switch (frecNombre) {
+      case 'mensual':
+        if (periodo === 'semana') total += montoArs * 0.25 // Aproximación semanal
+        else if (periodo === 'mes') total += montoArs
+        else if (periodo === 'trimestre') total += montoArs * 3
+        else if (periodo === 'anio') total += montoArs * 12
+        break
+      case 'quincenal':
+        if (periodo === 'semana') total += montoArs * 0.5
+        else if (periodo === 'mes') total += montoArs * 2
+        else if (periodo === 'trimestre') total += montoArs * 6
+        else if (periodo === 'anio') total += montoArs * 24
+        break
+      case 'semanal':
+        if (periodo === 'semana') total += montoArs
+        else if (periodo === 'mes') total += montoArs * 4
+        else if (periodo === 'trimestre') total += montoArs * 13
+        else if (periodo === 'anio') total += montoArs * 52
+        break
+      case 'anual':
+        if (periodo === 'anio') total += montoArs
+        break
+      case 'semestral':
+        if (periodo === 'anio') total += montoArs * 2
+        else if (periodo === 'trimestre') total += montoArs * 0.5
+        break
+      case 'trimestral':
+        if (periodo === 'trimestre') total += montoArs
+        else if (periodo === 'anio') total += montoArs * 4
+        break
+    }
+  })
+
+  return total
+}
+
 export default function SaludFinancieraPage() {
   const [periodo, setPeriodo] = useState<PeriodoSaludFinanciera>('mes')
 
-  const { data: saludResponse, isLoading, refetch, isFetching } = useSaludFinanciera(periodo)
+  const { data: saludResponse, isLoading: isLoadingSalud, refetch, isFetching } = useSaludFinanciera(periodo)
+  const { data: ingresosUnicosResponse, isLoading: isLoadingIngresos } = useIngresosUnicos()
+  const { data: ingresosRecurrentesResponse } = useIngresosRecurrentes()
+  const { data: frecuenciasResponse } = useFrecuencias()
 
   const salud = saludResponse?.data
+  const ingresosUnicos = ingresosUnicosResponse?.data || []
+  const ingresosRecurrentes = ingresosRecurrentesResponse?.data || []
+  const frecuencias = frecuenciasResponse?.data || []
+
+  const isLoading = isLoadingSalud || isLoadingIngresos
+
+  // Calcular ingresos del período
+  const ingresosPeriodo = useMemo(() => {
+    const { start, end } = getPeriodoRange(periodo)
+
+    // Ingresos únicos en el período
+    const ingresosUnicosEnPeriodo = ingresosUnicos
+      .filter(ing => {
+        const fecha = parseISO(ing.fecha)
+        return isWithinInterval(fecha, { start, end })
+      })
+      .reduce((sum, ing) => sum + (ing.monto_ars || 0), 0)
+
+    // Ingresos recurrentes calculados
+    const ingresosRecurrentesEnPeriodo = calcularIngresosRecurrentesPeriodo(
+      ingresosRecurrentes,
+      frecuencias,
+      periodo
+    )
+
+    return ingresosUnicosEnPeriodo + ingresosRecurrentesEnPeriodo
+  }, [ingresosUnicos, ingresosRecurrentes, frecuencias, periodo])
+
+  // Calcular métricas financieras
+  const metricas = useMemo(() => {
+    const gastos = salud?.totales?.total_ars || 0
+    const ingresos = ingresosPeriodo
+    const balance = ingresos - gastos
+    const tasaAhorro = ingresos > 0 ? (balance / ingresos) * 100 : 0
+    const ratioCobertura = gastos > 0 ? ingresos / gastos : (ingresos > 0 ? Infinity : 1)
+
+    return {
+      ingresos,
+      gastos,
+      balance,
+      tasaAhorro,
+      ratioCobertura,
+    }
+  }, [salud, ingresosPeriodo])
 
   if (isLoading) {
     return (
@@ -190,6 +320,126 @@ export default function SaludFinancieraPage() {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Income & Balance Metrics */}
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+            {/* Ingresos */}
+            <Card className="bg-green-500/5 border-green-500/20">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <ArrowUpCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span className="text-sm text-muted-foreground">Ingresos</span>
+                </div>
+                <p className="text-xl font-bold text-green-600 truncate" title={formatCurrency(metricas.ingresos)}>
+                  {formatCurrencyCompact(metricas.ingresos)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {periodLabels[periodo]}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Gastos */}
+            <Card className="bg-red-500/5 border-red-500/20">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <ArrowDownCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                  <span className="text-sm text-muted-foreground">Gastos</span>
+                </div>
+                <p className="text-xl font-bold text-red-600 truncate" title={formatCurrency(metricas.gastos)}>
+                  {formatCurrencyCompact(metricas.gastos)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {periodLabels[periodo]}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Balance */}
+            <Card className={metricas.balance >= 0 ? "bg-primary/5 border-primary/20" : "bg-orange-500/5 border-orange-500/20"}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-sm text-muted-foreground">Balance</span>
+                </div>
+                <p className={`text-xl font-bold truncate ${metricas.balance >= 0 ? 'text-primary' : 'text-orange-600'}`} title={formatCurrency(metricas.balance)}>
+                  {metricas.balance >= 0 ? '+' : ''}{formatCurrencyCompact(metricas.balance)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {metricas.balance >= 0 ? 'Superávit' : 'Déficit'}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Tasa de Ahorro */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <PiggyBank className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  <span className="text-sm text-muted-foreground">Tasa de Ahorro</span>
+                </div>
+                <p className={`text-xl font-bold ${metricas.tasaAhorro >= 20 ? 'text-green-600' : metricas.tasaAhorro >= 10 ? 'text-yellow-600' : metricas.tasaAhorro >= 0 ? 'text-orange-600' : 'text-red-600'}`}>
+                  {metricas.tasaAhorro.toFixed(1)}%
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {metricas.tasaAhorro >= 20 ? 'Excelente' : metricas.tasaAhorro >= 10 ? 'Bueno' : metricas.tasaAhorro >= 0 ? 'Mejorable' : 'Negativo'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Ratio de Cobertura */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                Ratio de Cobertura
+              </CardTitle>
+              <CardDescription>
+                Cuántas veces tus ingresos cubren tus gastos
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-3xl font-bold ${
+                      metricas.ratioCobertura >= 1.5 ? 'text-green-600' :
+                      metricas.ratioCobertura >= 1 ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`}>
+                      {metricas.ratioCobertura === Infinity ? '∞' : metricas.ratioCobertura.toFixed(2)}x
+                    </span>
+                    <Badge variant={
+                      metricas.ratioCobertura >= 1.5 ? 'default' :
+                      metricas.ratioCobertura >= 1 ? 'secondary' :
+                      'destructive'
+                    }>
+                      {metricas.ratioCobertura >= 1.5 ? 'Saludable' :
+                       metricas.ratioCobertura >= 1 ? 'Ajustado' :
+                       'En riesgo'}
+                    </Badge>
+                  </div>
+                  <Progress
+                    value={Math.min(metricas.ratioCobertura * 50, 100)}
+                    className="h-3"
+                  />
+                  <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+                    <span>0x</span>
+                    <span>1x (equilibrio)</span>
+                    <span>2x+</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mt-3">
+                {metricas.ratioCobertura >= 1.5
+                  ? 'Tus ingresos cubren cómodamente tus gastos. Tenés margen para ahorrar o invertir.'
+                  : metricas.ratioCobertura >= 1
+                  ? 'Tus ingresos cubren tus gastos pero con poco margen. Considerá reducir gastos no esenciales.'
+                  : 'Tus gastos superan tus ingresos. Es importante revisar tu presupuesto urgentemente.'}
+              </p>
             </CardContent>
           </Card>
 
@@ -421,32 +671,26 @@ export default function SaludFinancieraPage() {
           {/* Score explanation */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Cómo se calcula tu puntaje</CardTitle>
+              <CardTitle className="text-base">Cómo se calculan las métricas</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 text-sm">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 text-sm">
                 <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="font-semibold mb-1">Gastos Necesarios (40%)</p>
+                  <p className="font-semibold mb-1">Puntaje de Salud</p>
                   <p className="text-muted-foreground">
-                    Mayor porcentaje de gastos Necesarios = mejor puntaje
+                    Combina: gastos necesarios (40%), evitables (30%), tendencia (20%) y diversificación (10%)
                   </p>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="font-semibold mb-1">Gastos Prescindibles (30%)</p>
+                  <p className="font-semibold mb-1">Tasa de Ahorro</p>
                   <p className="text-muted-foreground">
-                    Menos gastos prescindibles = mejor puntaje
+                    (Ingresos - Gastos) / Ingresos × 100. Meta: 20%+ es excelente, 10%+ es bueno
                   </p>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="font-semibold mb-1">Tendencia (20%)</p>
+                  <p className="font-semibold mb-1">Ratio de Cobertura</p>
                   <p className="text-muted-foreground">
-                    Reducir gastos respecto al período anterior = mejor puntaje
-                  </p>
-                </div>
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="font-semibold mb-1">Diversificación (10%)</p>
-                  <p className="text-muted-foreground">
-                    Gastos distribuidos en más categorías = mejor puntaje
+                    Ingresos / Gastos. Meta: 1.5x+ es saludable, 1x es equilibrio, &lt;1x es déficit
                   </p>
                 </div>
               </div>
