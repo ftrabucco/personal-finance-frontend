@@ -168,13 +168,14 @@ export default function TarjetaDetallePage({ params }: PageProps) {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-2">
-              <Repeat className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Gastos Fijos</span>
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Débitos Automáticos</span>
             </div>
-            <p className="text-lg font-bold truncate" title={formatCurrency(totalDebitosARS + totalRecurrentesARS)}>{formatCurrencyCompact(totalDebitosARS + totalRecurrentesARS)}</p>
-            <p className="text-xs text-muted-foreground">
-              {debitosActivos.length + recurrentesActivos.length} activos
-            </p>
+            <p className="text-lg font-bold truncate" title={formatCurrency(totalDebitosARS)}>{formatCurrencyCompact(totalDebitosARS)}</p>
+            {totalDebitosUSD > 0 && (
+              <p className="text-xs text-muted-foreground">US$ {totalDebitosUSD.toFixed(2)}</p>
+            )}
+            <p className="text-xs text-muted-foreground">{debitosActivos.length} activos</p>
           </CardContent>
         </Card>
 
