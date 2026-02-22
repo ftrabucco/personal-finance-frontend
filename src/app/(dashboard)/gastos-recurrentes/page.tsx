@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, Repeat, Power, PowerOff, Play } from 'lucide-react'
+import { Plus, Pencil, Trash2, Repeat, Power, PowerOff, Play, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { format, isSameMonth } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,9 +35,14 @@ import { useProcesarGastoRecurrenteIndividual } from '@/lib/hooks/useProcesamien
 import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
 import type { GastoRecurrente } from '@/types'
 
+type SortField = 'descripcion' | 'monto_ars' | 'dia_de_pago' | 'categoria'
+type SortDirection = 'asc' | 'desc'
+
 function GastosRecurrentesContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingGasto, setEditingGasto] = useState<GastoRecurrente | null>(null)
+  const [sortField, setSortField] = useState<SortField>('descripcion')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -58,6 +63,56 @@ function GastosRecurrentesContent() {
   const procesarMutation = useProcesarGastoRecurrenteIndividual()
 
   const gastos = response?.data || []
+
+  const sortedGastos = useMemo(() => {
+    return [...gastos].sort((a, b) => {
+      let comparison = 0
+      switch (sortField) {
+        case 'descripcion':
+          comparison = a.descripcion.localeCompare(b.descripcion)
+          break
+        case 'monto_ars':
+          comparison = Number(a.monto_ars) - Number(b.monto_ars)
+          break
+        case 'dia_de_pago':
+          comparison = a.dia_de_pago - b.dia_de_pago
+          break
+        case 'categoria':
+          comparison = (a.categoria?.nombre_categoria || '').localeCompare(b.categoria?.nombre_categoria || '')
+          break
+      }
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [gastos, sortField, sortDirection])
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead
+      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field ? (
+          sortDirection === 'asc' ? (
+            <ArrowUp className="h-4 w-4" />
+          ) : (
+            <ArrowDown className="h-4 w-4" />
+          )
+        ) : (
+          <ArrowUpDown className="h-4 w-4 opacity-30" />
+        )}
+      </div>
+    </TableHead>
+  )
 
   const handleCreate = () => {
     setEditingGasto(null)
@@ -215,7 +270,7 @@ function GastosRecurrentesContent() {
             <>
               {/* Mobile: Cards */}
               <div className="space-y-3 md:hidden">
-                {gastos.map((gasto) => (
+                {sortedGastos.map((gasto) => (
                   <div key={gasto.id} className="rounded-lg border p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -314,18 +369,18 @@ function GastosRecurrentesContent() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Descripción</TableHead>
-                      <TableHead>Monto</TableHead>
-                      <TableHead>Día de Pago</TableHead>
+                      <SortableHeader field="descripcion">Descripción</SortableHeader>
+                      <SortableHeader field="monto_ars">Monto</SortableHeader>
+                      <SortableHeader field="dia_de_pago">Día de Pago</SortableHeader>
                       <TableHead>Frecuencia</TableHead>
-                      <TableHead>Categoría</TableHead>
+                      <SortableHeader field="categoria">Categoría</SortableHeader>
                       <TableHead>Última Generación</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {gastos.map((gasto) => (
+                    {sortedGastos.map((gasto) => (
                       <TableRow key={gasto.id}>
                         <TableCell className="max-w-xs truncate font-medium">
                           {gasto.descripcion}

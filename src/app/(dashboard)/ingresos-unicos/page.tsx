@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, TrendingUp } from 'lucide-react'
+import { Plus, Pencil, Trash2, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,9 +33,14 @@ import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
 import type { IngresoUnico } from '@/types'
 
+type SortField = 'fecha' | 'descripcion' | 'monto_ars' | 'fuente'
+type SortDirection = 'asc' | 'desc'
+
 function IngresosUnicosContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingIngreso, setEditingIngreso] = useState<IngresoUnico | null>(null)
+  const [sortField, setSortField] = useState<SortField>('fecha')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -54,6 +59,56 @@ function IngresosUnicosContent() {
   const deleteMutation = useDeleteIngresoUnico()
 
   const ingresos = response?.data || []
+
+  const sortedIngresos = useMemo(() => {
+    return [...ingresos].sort((a, b) => {
+      let comparison = 0
+      switch (sortField) {
+        case 'fecha':
+          comparison = new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+          break
+        case 'descripcion':
+          comparison = a.descripcion.localeCompare(b.descripcion)
+          break
+        case 'monto_ars':
+          comparison = Number(a.monto_ars) - Number(b.monto_ars)
+          break
+        case 'fuente':
+          comparison = (a.fuenteIngreso?.nombre || '').localeCompare(b.fuenteIngreso?.nombre || '')
+          break
+      }
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [ingresos, sortField, sortDirection])
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('desc')
+    }
+  }
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead
+      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field ? (
+          sortDirection === 'asc' ? (
+            <ArrowUp className="h-4 w-4" />
+          ) : (
+            <ArrowDown className="h-4 w-4" />
+          )
+        ) : (
+          <ArrowUpDown className="h-4 w-4 opacity-30" />
+        )}
+      </div>
+    </TableHead>
+  )
 
   const handleCreate = () => {
     setEditingIngreso(null)
@@ -169,7 +224,7 @@ function IngresosUnicosContent() {
             <>
               {/* Mobile: Cards */}
               <div className="space-y-3 md:hidden">
-                {ingresos.map((ingreso) => (
+                {sortedIngresos.map((ingreso) => (
                   <div key={ingreso.id} className="rounded-lg border p-3">
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <span className="text-xs font-medium text-green-600">
@@ -219,15 +274,15 @@ function IngresosUnicosContent() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Descripción</TableHead>
-                      <TableHead>Fuente</TableHead>
-                      <TableHead>Monto</TableHead>
+                      <SortableHeader field="fecha">Fecha</SortableHeader>
+                      <SortableHeader field="descripcion">Descripción</SortableHeader>
+                      <SortableHeader field="fuente">Fuente</SortableHeader>
+                      <SortableHeader field="monto_ars">Monto</SortableHeader>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {ingresos.map((ingreso) => (
+                    {sortedIngresos.map((ingreso) => (
                       <TableRow key={ingreso.id}>
                         <TableCell>
                           {format(new Date(ingreso.fecha), 'dd/MM/yyyy')}

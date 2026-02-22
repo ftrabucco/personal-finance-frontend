@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, Wallet } from 'lucide-react'
+import { Plus, Pencil, Trash2, Wallet, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,9 +34,14 @@ import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
 import type { GastoUnico } from '@/types'
 
+type SortField = 'fecha' | 'descripcion' | 'monto_ars' | 'categoria'
+type SortDirection = 'asc' | 'desc'
+
 function GastosUnicosContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingGasto, setEditingGasto] = useState<GastoUnico | null>(null)
+  const [sortField, setSortField] = useState<SortField>('fecha')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -56,6 +61,56 @@ function GastosUnicosContent() {
   const deleteMutation = useDeleteGastoUnico()
 
   const gastos = response?.data || []
+
+  const sortedGastos = useMemo(() => {
+    return [...gastos].sort((a, b) => {
+      let comparison = 0
+      switch (sortField) {
+        case 'fecha':
+          comparison = new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+          break
+        case 'descripcion':
+          comparison = a.descripcion.localeCompare(b.descripcion)
+          break
+        case 'monto_ars':
+          comparison = Number(a.monto_ars) - Number(b.monto_ars)
+          break
+        case 'categoria':
+          comparison = (a.categoria?.nombre_categoria || '').localeCompare(b.categoria?.nombre_categoria || '')
+          break
+      }
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [gastos, sortField, sortDirection])
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('desc')
+    }
+  }
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead
+      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field ? (
+          sortDirection === 'asc' ? (
+            <ArrowUp className="h-4 w-4" />
+          ) : (
+            <ArrowDown className="h-4 w-4" />
+          )
+        ) : (
+          <ArrowUpDown className="h-4 w-4 opacity-30" />
+        )}
+      </div>
+    </TableHead>
+  )
 
   const handleCreate = () => {
     setEditingGasto(null)
@@ -97,9 +152,9 @@ function GastosUnicosContent() {
     }
   }
 
-  // ✨ Totales en ambas monedas
-  const totalARS = gastos.reduce((sum, gasto) => sum + (Number(gasto.monto_ars) || 0), 0)
-  const totalUSD = gastos.reduce((sum, gasto) => sum + (Number(gasto.monto_usd) || 0), 0)
+  // Totales en ambas monedas
+  const totalARS = sortedGastos.reduce((sum, gasto) => sum + (Number(gasto.monto_ars) || 0), 0)
+  const totalUSD = sortedGastos.reduce((sum, gasto) => sum + (Number(gasto.monto_usd) || 0), 0)
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -174,7 +229,7 @@ function GastosUnicosContent() {
             <>
               {/* Mobile: Cards */}
               <div className="space-y-3 md:hidden">
-                {gastos.map((gasto) => (
+                {sortedGastos.map((gasto) => (
                   <div key={gasto.id} className="rounded-lg border p-3">
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <Badge variant={gasto.procesado ? 'default' : 'secondary'} className="text-xs shrink-0">
@@ -227,17 +282,17 @@ function GastosUnicosContent() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Descripción</TableHead>
-                      <TableHead>Categoría</TableHead>
-                      <TableHead>Monto</TableHead>
+                      <SortableHeader field="fecha">Fecha</SortableHeader>
+                      <SortableHeader field="descripcion">Descripción</SortableHeader>
+                      <SortableHeader field="categoria">Categoría</SortableHeader>
+                      <SortableHeader field="monto_ars">Monto</SortableHeader>
                       <TableHead>Tipo de Pago</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {gastos.map((gasto) => (
+                    {sortedGastos.map((gasto) => (
                       <TableRow key={gasto.id}>
                         <TableCell>
                           {format(new Date(gasto.fecha), 'dd/MM/yyyy')}

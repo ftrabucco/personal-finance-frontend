@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, Repeat, Power, PowerOff } from 'lucide-react'
+import { Plus, Pencil, Trash2, Repeat, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -33,9 +33,14 @@ import {
 import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
 import type { IngresoRecurrente } from '@/types'
 
+type SortField = 'descripcion' | 'monto_ars' | 'dia_de_pago' | 'fuente'
+type SortDirection = 'asc' | 'desc'
+
 function IngresosRecurrentesContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingIngreso, setEditingIngreso] = useState<IngresoRecurrente | null>(null)
+  const [sortField, setSortField] = useState<SortField>('descripcion')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -55,6 +60,56 @@ function IngresosRecurrentesContent() {
   const toggleMutation = useToggleIngresoRecurrente()
 
   const ingresos = response?.data || []
+
+  const sortedIngresos = useMemo(() => {
+    return [...ingresos].sort((a, b) => {
+      let comparison = 0
+      switch (sortField) {
+        case 'descripcion':
+          comparison = a.descripcion.localeCompare(b.descripcion)
+          break
+        case 'monto_ars':
+          comparison = Number(a.monto_ars) - Number(b.monto_ars)
+          break
+        case 'dia_de_pago':
+          comparison = a.dia_de_pago - b.dia_de_pago
+          break
+        case 'fuente':
+          comparison = (a.fuenteIngreso?.nombre || '').localeCompare(b.fuenteIngreso?.nombre || '')
+          break
+      }
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [ingresos, sortField, sortDirection])
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead
+      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field ? (
+          sortDirection === 'asc' ? (
+            <ArrowUp className="h-4 w-4" />
+          ) : (
+            <ArrowDown className="h-4 w-4" />
+          )
+        ) : (
+          <ArrowUpDown className="h-4 w-4 opacity-30" />
+        )}
+      </div>
+    </TableHead>
+  )
 
   const handleCreate = () => {
     setEditingIngreso(null)
@@ -199,7 +254,7 @@ function IngresosRecurrentesContent() {
             <>
               {/* Mobile: Cards */}
               <div className="space-y-3 md:hidden">
-                {ingresos.map((ingreso) => (
+                {sortedIngresos.map((ingreso) => (
                   <div key={ingreso.id} className="rounded-lg border p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -280,17 +335,17 @@ function IngresosRecurrentesContent() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Descripción</TableHead>
-                      <TableHead>Monto</TableHead>
-                      <TableHead>Día de Cobro</TableHead>
+                      <SortableHeader field="descripcion">Descripción</SortableHeader>
+                      <SortableHeader field="monto_ars">Monto</SortableHeader>
+                      <SortableHeader field="dia_de_pago">Día de Cobro</SortableHeader>
                       <TableHead>Frecuencia</TableHead>
-                      <TableHead>Fuente</TableHead>
+                      <SortableHeader field="fuente">Fuente</SortableHeader>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {ingresos.map((ingreso) => (
+                    {sortedIngresos.map((ingreso) => (
                       <TableRow key={ingreso.id}>
                         <TableCell className="max-w-xs truncate font-medium">
                           {ingreso.descripcion}

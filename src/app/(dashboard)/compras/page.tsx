@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, ShoppingCart } from 'lucide-react'
+import { Plus, Pencil, Trash2, ShoppingCart, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,9 +34,14 @@ import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
 import type { Compra } from '@/types'
 
+type SortField = 'fecha_compra' | 'descripcion' | 'monto_total_ars' | 'cantidad_cuotas' | 'tarjeta'
+type SortDirection = 'asc' | 'desc'
+
 function ComprasContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingCompra, setEditingCompra] = useState<Compra | null>(null)
+  const [sortField, setSortField] = useState<SortField>('fecha_compra')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -55,6 +60,60 @@ function ComprasContent() {
   const deleteMutation = useDeleteCompra()
 
   const compras = response?.data || []
+
+  // Sorting logic
+  const sortedCompras = useMemo(() => {
+    return [...compras].sort((a, b) => {
+      let comparison = 0
+      switch (sortField) {
+        case 'fecha_compra':
+          comparison = new Date(a.fecha_compra).getTime() - new Date(b.fecha_compra).getTime()
+          break
+        case 'descripcion':
+          comparison = a.descripcion.localeCompare(b.descripcion)
+          break
+        case 'monto_total_ars':
+          comparison = Number(a.monto_total_ars) - Number(b.monto_total_ars)
+          break
+        case 'cantidad_cuotas':
+          comparison = a.cantidad_cuotas - b.cantidad_cuotas
+          break
+        case 'tarjeta':
+          comparison = (a.tarjeta?.nombre || '').localeCompare(b.tarjeta?.nombre || '')
+          break
+      }
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [compras, sortField, sortDirection])
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('desc')
+    }
+  }
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead
+      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field ? (
+          sortDirection === 'asc' ? (
+            <ArrowUp className="h-4 w-4" />
+          ) : (
+            <ArrowDown className="h-4 w-4" />
+          )
+        ) : (
+          <ArrowUpDown className="h-4 w-4 opacity-30" />
+        )}
+      </div>
+    </TableHead>
+  )
 
   const handleCreate = () => {
     setEditingCompra(null)
@@ -96,9 +155,9 @@ function ComprasContent() {
     }
   }
 
-  const totalARS = compras.reduce((sum, compra) => sum + (Number(compra.monto_total_ars) || 0), 0)
-  const totalUSD = compras.reduce((sum, compra) => sum + (Number(compra.monto_total_usd) || 0), 0)
-  const comprasPendientes = compras.filter((c) => c.pendiente_cuotas).length
+  const totalARS = sortedCompras.reduce((sum, compra) => sum + (Number(compra.monto_total_ars) || 0), 0)
+  const totalUSD = sortedCompras.reduce((sum, compra) => sum + (Number(compra.monto_total_usd) || 0), 0)
+  const comprasPendientes = sortedCompras.filter((c) => c.pendiente_cuotas).length
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -164,7 +223,7 @@ function ComprasContent() {
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">Cargando compras...</div>
-          ) : compras.length === 0 ? (
+          ) : sortedCompras.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No hay compras registradas. Crea tu primera compra.
             </div>
@@ -172,7 +231,7 @@ function ComprasContent() {
             <>
               {/* Mobile: Cards */}
               <div className="space-y-3 md:hidden">
-                {compras.map((compra) => (
+                {sortedCompras.map((compra) => (
                   <div key={compra.id} className="rounded-lg border p-3">
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2">
@@ -233,18 +292,18 @@ function ComprasContent() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Descripción</TableHead>
+                      <SortableHeader field="fecha_compra">Fecha</SortableHeader>
+                      <SortableHeader field="descripcion">Descripción</SortableHeader>
                       <TableHead>Categoría</TableHead>
-                      <TableHead>Monto Total</TableHead>
-                      <TableHead>Cuotas</TableHead>
-                      <TableHead>Tarjeta</TableHead>
+                      <SortableHeader field="monto_total_ars">Monto Total</SortableHeader>
+                      <SortableHeader field="cantidad_cuotas">Cuotas</SortableHeader>
+                      <SortableHeader field="tarjeta">Tarjeta</SortableHeader>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {compras.map((compra) => {
+                    {sortedCompras.map((compra) => {
                       return (
                         <TableRow key={compra.id}>
                           <TableCell>
