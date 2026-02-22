@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, CreditCard, Power, PowerOff, Play } from 'lucide-react'
+import { Plus, Pencil, Trash2, CreditCard, Power, PowerOff, Play, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { format, isSameMonth } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,9 +35,14 @@ import { useProcesarDebitoIndividual } from '@/lib/hooks/useProcesamiento'
 import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
 import type { DebitoAutomatico } from '@/types'
 
+type SortField = 'descripcion' | 'monto_ars' | 'dia_de_pago' | 'categoria'
+type SortDirection = 'asc' | 'desc'
+
 function DebitosAutomaticosContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingDebito, setEditingDebito] = useState<DebitoAutomatico | null>(null)
+  const [sortField, setSortField] = useState<SortField>('descripcion')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -58,6 +63,56 @@ function DebitosAutomaticosContent() {
   const procesarMutation = useProcesarDebitoIndividual()
 
   const debitos = response?.data || []
+
+  const sortedDebitos = useMemo(() => {
+    return [...debitos].sort((a, b) => {
+      let comparison = 0
+      switch (sortField) {
+        case 'descripcion':
+          comparison = a.descripcion.localeCompare(b.descripcion)
+          break
+        case 'monto_ars':
+          comparison = Number(a.monto_ars) - Number(b.monto_ars)
+          break
+        case 'dia_de_pago':
+          comparison = a.dia_de_pago - b.dia_de_pago
+          break
+        case 'categoria':
+          comparison = (a.categoria?.nombre_categoria || '').localeCompare(b.categoria?.nombre_categoria || '')
+          break
+      }
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [debitos, sortField, sortDirection])
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead
+      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field ? (
+          sortDirection === 'asc' ? (
+            <ArrowUp className="h-4 w-4" />
+          ) : (
+            <ArrowDown className="h-4 w-4" />
+          )
+        ) : (
+          <ArrowUpDown className="h-4 w-4 opacity-30" />
+        )}
+      </div>
+    </TableHead>
+  )
 
   const handleCreate = () => {
     setEditingDebito(null)
@@ -215,7 +270,7 @@ function DebitosAutomaticosContent() {
             <>
               {/* Mobile: Cards */}
               <div className="space-y-3 md:hidden">
-                {debitos.map((debito) => (
+                {sortedDebitos.map((debito) => (
                   <div key={debito.id} className="rounded-lg border p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -314,18 +369,18 @@ function DebitosAutomaticosContent() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Descripción</TableHead>
-                      <TableHead>Monto</TableHead>
-                      <TableHead>Día de Débito</TableHead>
+                      <SortableHeader field="descripcion">Descripción</SortableHeader>
+                      <SortableHeader field="monto_ars">Monto</SortableHeader>
+                      <SortableHeader field="dia_de_pago">Día de Débito</SortableHeader>
                       <TableHead>Frecuencia</TableHead>
-                      <TableHead>Categoría</TableHead>
+                      <SortableHeader field="categoria">Categoría</SortableHeader>
                       <TableHead>Última Generación</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {debitos.map((debito) => (
+                    {sortedDebitos.map((debito) => (
                       <TableRow key={debito.id}>
                         <TableCell className="max-w-xs truncate font-medium">
                           {debito.descripcion}
