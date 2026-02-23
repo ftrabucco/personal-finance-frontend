@@ -3,7 +3,11 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Form } from '@/components/ui/form'
+import { useEffect } from 'react'
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from '@/components/ui/form'
+import { Switch } from '@/components/ui/switch'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CreditCard, Info } from 'lucide-react'
 import {
   DescripcionField,
   MontoConMonedaField,
@@ -22,11 +26,12 @@ import { useTipoCambioActual } from '@/lib/hooks/useTipoCambio'
 import type { DebitoAutomatico, Moneda } from '@/types'
 
 const debitoAutomaticoSchema = z.object({
-  descripcion: z.string().min(1, 'La descripción es requerida'),
+  descripcion: z.string().min(1, 'La descripcion es requerida'),
   monto: z.number().positive('El monto debe ser mayor a 0'),
-  dia_de_pago: z.number().int().min(1).max(31, 'Debe estar entre 1 y 31'),
+  dia_de_pago: z.number().int().min(1).max(31, 'Debe estar entre 1 y 31').nullable(),
+  usa_vencimiento_tarjeta: z.boolean(),
   activo: z.boolean(),
-  categoria_gasto_id: z.number({ message: 'La categoría es requerida' }),
+  categoria_gasto_id: z.number({ message: 'La categoria es requerida' }),
   importancia_gasto_id: z.number({ message: 'La importancia es requerida' }),
   tipo_pago_id: z.number({ message: 'El tipo de pago es requerido' }),
   tarjeta_id: z.number().nullable(),
@@ -60,7 +65,8 @@ export function DebitoAutomaticoForm({
     defaultValues: {
       descripcion: initialData?.descripcion || '',
       monto: Number(initialData?.monto) || 0,
-      dia_de_pago: Number(initialData?.dia_de_pago) || 1,
+      dia_de_pago: initialData?.dia_de_pago ?? 1,
+      usa_vencimiento_tarjeta: initialData?.usa_vencimiento_tarjeta ?? false,
       activo: initialData?.activo ?? true,
       categoria_gasto_id: initialData?.categoria_gasto_id,
       importancia_gasto_id: initialData?.importancia_gasto_id,
@@ -77,6 +83,32 @@ export function DebitoAutomaticoForm({
 
   const montoActual = form.watch('monto')
   const monedaActual = form.watch('moneda_origen')
+  const tarjetaIdActual = form.watch('tarjeta_id')
+  const usaVencimientoTarjeta = form.watch('usa_vencimiento_tarjeta')
+
+  // Find selected card details
+  const tarjetaSeleccionada = tarjetas.find(t => t.id === tarjetaIdActual)
+  const esTarjetaCredito = tarjetaSeleccionada?.tipo === 'credito'
+
+  // Auto-enable usa_vencimiento_tarjeta when selecting a credit card
+  useEffect(() => {
+    if (esTarjetaCredito && !usaVencimientoTarjeta) {
+      // Suggest but don't force
+    }
+    // If not credit card, disable usa_vencimiento_tarjeta
+    if (!esTarjetaCredito && usaVencimientoTarjeta) {
+      form.setValue('usa_vencimiento_tarjeta', false)
+    }
+  }, [esTarjetaCredito, usaVencimientoTarjeta, form])
+
+  // Set dia_de_pago to null when using card due date
+  useEffect(() => {
+    if (usaVencimientoTarjeta) {
+      form.setValue('dia_de_pago', null)
+    } else if (form.getValues('dia_de_pago') === null) {
+      form.setValue('dia_de_pago', 1)
+    }
+  }, [usaVencimientoTarjeta, form])
 
   if (catalogosLoading) {
     return <div className="text-center py-4">Cargando formulario...</div>
@@ -100,12 +132,77 @@ export function DebitoAutomaticoForm({
           montoActual={montoActual}
         />
 
-        <DiaDePagoField
+        <TarjetaField
           control={form.control}
-          name="dia_de_pago"
-          label="Día de Débito"
-          description="Día del mes en que se debita"
+          name="tarjeta_id"
+          tarjetas={tarjetas}
         />
+
+        {/* Show usa_vencimiento_tarjeta option only for credit cards */}
+        {esTarjetaCredito && (
+          <FormField
+            control={form.control}
+            name="usa_vencimiento_tarjeta"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                <div className="space-y-0.5">
+                  <FormLabel>Usar fecha de vencimiento de la tarjeta</FormLabel>
+                  <FormDescription>
+                    El cargo se registrara el dia {tarjetaSeleccionada?.dia_mes_vencimiento} de cada mes
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        )}
+
+        {/* Info alert about when the debit impacts */}
+        {tarjetaIdActual && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              {esTarjetaCredito ? (
+                usaVencimientoTarjeta ? (
+                  <>
+                    <strong>Tarjeta de credito:</strong> El cargo se cobrara el dia{' '}
+                    <strong>{tarjetaSeleccionada?.dia_mes_vencimiento}</strong> de cada mes
+                    (fecha de vencimiento de la tarjeta).
+                  </>
+                ) : (
+                  <>
+                    <strong>Tarjeta de credito:</strong> El cargo se registra el dia indicado,
+                    pero el pago real sale de tu bolsillo el dia{' '}
+                    <strong>{tarjetaSeleccionada?.dia_mes_vencimiento}</strong> (vencimiento de la tarjeta).
+                  </>
+                )
+              ) : (
+                <>
+                  <strong>Tarjeta de debito:</strong> El cargo se debita directamente de tu cuenta
+                  el dia indicado.
+                </>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Show dia_de_pago only if not using card due date */}
+        {!usaVencimientoTarjeta && (
+          <DiaDePagoField
+            control={form.control}
+            name="dia_de_pago"
+            label="Dia de Debito"
+            description={esTarjetaCredito
+              ? 'Dia del mes en que se carga a la tarjeta'
+              : 'Dia del mes en que se debita de tu cuenta'
+            }
+          />
+        )}
 
         <FrecuenciaField
           control={form.control}
@@ -131,16 +228,10 @@ export function DebitoAutomaticoForm({
           tiposPago={tiposPago.data?.data || []}
         />
 
-        <TarjetaField
-          control={form.control}
-          name="tarjeta_id"
-          tarjetas={tarjetas}
-        />
-
         <ActivoField
           control={form.control}
           name="activo"
-          description="Solo los débitos activos generarán gastos automáticos"
+          description="Solo los debitos activos generaran gastos automaticos"
         />
 
         <FormActions onCancel={onCancel} isSubmitting={isSubmitting} />

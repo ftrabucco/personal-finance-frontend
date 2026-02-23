@@ -64,6 +64,23 @@ function DebitosAutomaticosContent() {
 
   const debitos = response?.data || []
 
+  // Helper para mostrar el día de impacto del débito
+  const getDiaImpacto = (debito: DebitoAutomatico): { dia: number | null; usaTarjeta: boolean } => {
+    if (debito.usa_vencimiento_tarjeta && debito.tarjeta?.tipo === 'credito') {
+      return { dia: debito.tarjeta.dia_mes_vencimiento ?? null, usaTarjeta: true }
+    }
+    return { dia: debito.dia_de_pago, usaTarjeta: false }
+  }
+
+  const formatDiaImpacto = (debito: DebitoAutomatico): string => {
+    const { dia, usaTarjeta } = getDiaImpacto(debito)
+    if (dia === null) return '-'
+    if (usaTarjeta) {
+      return `Día ${dia} (vto. tarjeta)`
+    }
+    return `Día ${dia}`
+  }
+
   const sortedDebitos = useMemo(() => {
     return [...debitos].sort((a, b) => {
       let comparison = 0
@@ -75,7 +92,9 @@ function DebitosAutomaticosContent() {
           comparison = Number(a.monto_ars) - Number(b.monto_ars)
           break
         case 'dia_de_pago':
-          comparison = a.dia_de_pago - b.dia_de_pago
+          const diaA = getDiaImpacto(a).dia ?? 0
+          const diaB = getDiaImpacto(b).dia ?? 0
+          comparison = diaA - diaB
           break
         case 'categoria':
           comparison = (a.categoria?.nombre_categoria || '').localeCompare(b.categoria?.nombre_categoria || '')
@@ -174,6 +193,7 @@ function DebitosAutomaticosContent() {
     if (!ultimaFecha) return false
     return isSameMonth(new Date(ultimaFecha), new Date())
   }
+
   const totalARS = debitosActivos.reduce(
     (sum, debito) => sum + (Number(debito.monto_ars) || 0),
     0
@@ -285,7 +305,7 @@ function DebitosAutomaticosContent() {
                             <Badge variant="secondary" className="text-xs">Inactivo</Badge>
                           )}
                           <span className="text-xs text-muted-foreground">
-                            Día {debito.dia_de_pago}
+                            {formatDiaImpacto(debito)}
                           </span>
                         </div>
                         <p className="font-medium truncate">{debito.descripcion}</p>
@@ -393,7 +413,7 @@ function DebitosAutomaticosContent() {
                             tipoCambio={debito.tipo_cambio_referencia}
                           />
                         </TableCell>
-                        <TableCell>Día {debito.dia_de_pago}</TableCell>
+                        <TableCell>{formatDiaImpacto(debito)}</TableCell>
                         <TableCell>{debito.frecuencia?.nombre_frecuencia || '-'}</TableCell>
                         <TableCell>
                           {debito.categoria?.nombre_categoria || '-'}
