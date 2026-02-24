@@ -118,7 +118,8 @@ export interface DebitoAutomatico {
   monto_ars: number
   monto_usd: number
   tipo_cambio_referencia: number
-  dia_de_pago: number
+  dia_de_pago: number | null // Null when using credit card due date
+  usa_vencimiento_tarjeta: boolean // If true, uses credit card's due date instead of dia_de_pago
   activo: boolean
   ultima_fecha_generado: string | null
   categoria_gasto_id: number
