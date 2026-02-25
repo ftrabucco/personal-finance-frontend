@@ -141,12 +141,25 @@ export default function DashboardPage() {
     0
   )
 
-  // Ingresos recurrentes activos (estimado mensual)
+  // Ingresos recurrentes activos del mes actual (verifica fecha_inicio y fecha_fin)
   const totalIngresosRecurrentesMensual = useMemo(() =>
     ingresosRecurrentes
-      .filter((i) => i.activo)
+      .filter((i) => {
+        if (!i.activo) return false
+        // Verificar que fecha_inicio sea anterior o igual al inicio del mes actual
+        if (i.fecha_inicio) {
+          const fechaInicio = new Date(i.fecha_inicio)
+          if (fechaInicio > endOfCurrentMonth) return false
+        }
+        // Verificar que fecha_fin (si existe) sea posterior o igual al inicio del mes actual
+        if (i.fecha_fin) {
+          const fechaFin = new Date(i.fecha_fin)
+          if (fechaFin < startOfCurrentMonth) return false
+        }
+        return true
+      })
       .reduce((sum, i) => sum + parseFloat(String(i.monto_ars || 0)), 0),
-    [ingresosRecurrentes]
+    [ingresosRecurrentes, startOfCurrentMonth, endOfCurrentMonth]
   )
 
   // Total ingresos del mes (únicos + recurrentes activos)
@@ -208,9 +221,22 @@ export default function DashboardPage() {
         })
         .reduce((sum, i) => sum + parseFloat(String(i.monto_ars || 0)), 0)
 
-      // Para ingresos recurrentes, asumimos que aplican a todos los meses si están activos
+      // Para ingresos recurrentes, verificar fecha_inicio y fecha_fin para cada mes
       const totalIngresosR = ingresosRecurrentes
-        .filter((i) => i.activo)
+        .filter((i) => {
+          if (!i.activo) return false
+          // Verificar que fecha_inicio sea anterior o igual al fin del mes analizado
+          if (i.fecha_inicio) {
+            const fechaInicio = new Date(i.fecha_inicio)
+            if (fechaInicio > fin) return false
+          }
+          // Verificar que fecha_fin (si existe) sea posterior o igual al inicio del mes
+          if (i.fecha_fin) {
+            const fechaFin = new Date(i.fecha_fin)
+            if (fechaFin < inicio) return false
+          }
+          return true
+        })
         .reduce((sum, i) => sum + parseFloat(String(i.monto_ars || 0)), 0)
 
       meses.push({
