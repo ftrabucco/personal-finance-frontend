@@ -18,7 +18,7 @@ const navItems = [
   { name: 'Inicio', href: '/', icon: Home },
   { name: 'Gastos', href: '/gastos', icon: Receipt },
   { name: 'Nuevo', href: '#', icon: Plus, isAction: true },
-  { name: 'Reportes', href: '/reportes', icon: BarChart3 },
+  { name: 'Proyecciones', href: '/proyecciones', icon: BarChart3 },
   { name: 'Perfil', href: '/perfil', icon: User },
 ]
 
