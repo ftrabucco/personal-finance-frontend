@@ -13,7 +13,6 @@ export const ROUTES = {
   GASTOS_RECURRENTES: '/gastos-recurrentes',
   DEBITOS_AUTOMATICOS: '/debitos-automaticos',
   TARJETAS: '/tarjetas',
-  REPORTES: '/reportes',
   PROYECCIONES: '/proyecciones',
   SALUD_FINANCIERA: '/salud-financiera',
   PERFIL: '/perfil',

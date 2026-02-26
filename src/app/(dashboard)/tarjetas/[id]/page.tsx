@@ -65,23 +65,38 @@ export default function TarjetaDetallePage({ params }: PageProps) {
 
   // Calcular totales
   const comprasConCuotas = compras.filter((c) => c.pendiente_cuotas)
+
+  // Monto mensual de cuotas (lo que se paga cada mes)
   const totalCuotasMensualesARS = comprasConCuotas.reduce((sum, c) => {
-    return sum + (c.monto_total_ars || 0) / (c.cantidad_cuotas || 1)
+    const montoTotal = Number(c.monto_total_ars) || 0
+    const cuotas = Number(c.cantidad_cuotas) || 1
+    return sum + montoTotal / cuotas
   }, 0)
   const totalCuotasMensualesUSD = comprasConCuotas.reduce((sum, c) => {
-    return sum + (c.monto_total_usd || 0) / (c.cantidad_cuotas || 1)
+    const montoTotal = Number(c.monto_total_usd) || 0
+    const cuotas = Number(c.cantidad_cuotas) || 1
+    return sum + montoTotal / cuotas
+  }, 0)
+
+  // Total restante por pagar de todas las cuotas
+  const totalCuotasPendientesARS = comprasConCuotas.reduce((sum, c) => {
+    const montoTotal = Number(c.monto_total_ars) || 0
+    const cuotas = Number(c.cantidad_cuotas) || 1
+    const cuotasPagadas = Number(c.cuotas_pagadas) || 0
+    const cuotasRestantes = cuotas - cuotasPagadas
+    return sum + (montoTotal / cuotas) * cuotasRestantes
   }, 0)
 
   const debitosActivos = debitos.filter((d) => d.activo)
-  const totalDebitosARS = debitosActivos.reduce((sum, d) => sum + (d.monto_ars || 0), 0)
-  const totalDebitosUSD = debitosActivos.reduce((sum, d) => sum + (d.monto_usd || 0), 0)
+  const totalDebitosARS = debitosActivos.reduce((sum, d) => sum + (Number(d.monto_ars) || 0), 0)
+  const totalDebitosUSD = debitosActivos.reduce((sum, d) => sum + (Number(d.monto_usd) || 0), 0)
 
   const recurrentesActivos = recurrentes.filter((r) => r.activo)
-  const totalRecurrentesARS = recurrentesActivos.reduce((sum, r) => sum + (r.monto_ars || 0), 0)
-  const totalRecurrentesUSD = recurrentesActivos.reduce((sum, r) => sum + (r.monto_usd || 0), 0)
+  const totalRecurrentesARS = recurrentesActivos.reduce((sum, r) => sum + (Number(r.monto_ars) || 0), 0)
+  const totalRecurrentesUSD = recurrentesActivos.reduce((sum, r) => sum + (Number(r.monto_usd) || 0), 0)
 
-  const totalGastosUnicosARS = gastosUnicos.reduce((sum, g) => sum + (g.monto_ars || 0), 0)
-  const totalGastosUnicosUSD = gastosUnicos.reduce((sum, g) => sum + (g.monto_usd || 0), 0)
+  const totalGastosUnicosARS = gastosUnicos.reduce((sum, g) => sum + (Number(g.monto_ars) || 0), 0)
+  const totalGastosUnicosUSD = gastosUnicos.reduce((sum, g) => sum + (Number(g.monto_usd) || 0), 0)
 
   const totalCompromisosMensualesARS = totalDebitosARS + totalRecurrentesARS + totalCuotasMensualesARS
   const totalCompromisosMensualesUSD = totalDebitosUSD + totalRecurrentesUSD + totalCuotasMensualesUSD
@@ -160,8 +175,8 @@ export default function TarjetaDetallePage({ params }: PageProps) {
               <ShoppingCart className="h-4 w-4 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">Cuotas Pendientes</span>
             </div>
-            <p className="text-lg font-bold truncate" title={formatCurrency(totalCuotasMensualesARS)}>{formatCurrencyCompact(totalCuotasMensualesARS)}</p>
-            <p className="text-xs text-muted-foreground">{comprasConCuotas.length} compras</p>
+            <p className="text-lg font-bold truncate" title={formatCurrency(totalCuotasPendientesARS)}>{formatCurrencyCompact(totalCuotasPendientesARS)}</p>
+            <p className="text-xs text-muted-foreground">{comprasConCuotas.length} compras • {formatCurrencyCompact(totalCuotasMensualesARS)}/mes</p>
           </CardContent>
         </Card>
 
@@ -210,7 +225,11 @@ export default function TarjetaDetallePage({ params }: PageProps) {
           ) : (
             <div className="space-y-3">
               {comprasConCuotas.map((compra) => {
-                const cuotaMensual = (compra.monto_total_ars || 0) / (compra.cantidad_cuotas || 1)
+                const montoTotal = Number(compra.monto_total_ars) || 0
+                const cuotas = Number(compra.cantidad_cuotas) || 1
+                const cuotasPagadas = Number(compra.cuotas_pagadas) || 0
+                const cuotasRestantes = cuotas - cuotasPagadas
+                const cuotaMensual = montoTotal / cuotas
                 return (
                   <div
                     key={compra.id}
@@ -221,13 +240,13 @@ export default function TarjetaDetallePage({ params }: PageProps) {
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <span>{format(new Date(compra.fecha_compra), 'dd/MM/yyyy')}</span>
                         <span>•</span>
-                        <span>{compra.cantidad_cuotas} cuotas</span>
+                        <span>{cuotasRestantes} de {cuotas} cuotas restantes</span>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold">{formatCurrency(cuotaMensual)}/mes</p>
                       <p className="text-xs text-muted-foreground">
-                        Total: {formatCurrency(compra.monto_total_ars)}
+                        Total: {formatCurrency(montoTotal)}
                       </p>
                     </div>
                   </div>
