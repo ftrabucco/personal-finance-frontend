@@ -1,5 +1,6 @@
 'use client'
 
+// Tarjeta detail page - shows all expenses associated with a card
 import { use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
