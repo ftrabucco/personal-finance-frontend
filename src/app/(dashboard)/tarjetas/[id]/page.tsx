@@ -79,13 +79,10 @@ export default function TarjetaDetallePage({ params }: PageProps) {
     return sum + montoTotal / cuotas
   }, 0)
 
-  // Total restante por pagar de todas las cuotas
+  // Total pendiente de todas las compras en cuotas
+  // Nota: El monto total representa lo que falta por pagar de compras con pendiente_cuotas=true
   const totalCuotasPendientesARS = comprasConCuotas.reduce((sum, c) => {
-    const montoTotal = Number(c.monto_total_ars) || 0
-    const cuotas = Number(c.cantidad_cuotas) || 1
-    const cuotasPagadas = Number(c.cuotas_pagadas) || 0
-    const cuotasRestantes = cuotas - cuotasPagadas
-    return sum + (montoTotal / cuotas) * cuotasRestantes
+    return sum + (Number(c.monto_total_ars) || 0)
   }, 0)
 
   const debitosActivos = debitos.filter((d) => d.activo)
@@ -228,8 +225,6 @@ export default function TarjetaDetallePage({ params }: PageProps) {
               {comprasConCuotas.map((compra) => {
                 const montoTotal = Number(compra.monto_total_ars) || 0
                 const cuotas = Number(compra.cantidad_cuotas) || 1
-                const cuotasPagadas = Number(compra.cuotas_pagadas) || 0
-                const cuotasRestantes = cuotas - cuotasPagadas
                 const cuotaMensual = montoTotal / cuotas
                 return (
                   <div
@@ -241,7 +236,7 @@ export default function TarjetaDetallePage({ params }: PageProps) {
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <span>{format(new Date(compra.fecha_compra), 'dd/MM/yyyy')}</span>
                         <span>•</span>
-                        <span>{cuotasRestantes} de {cuotas} cuotas restantes</span>
+                        <span>{cuotas} cuotas</span>
                       </div>
                     </div>
                     <div className="text-right">
