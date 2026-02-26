@@ -54,9 +54,8 @@ export const tipoCambioApi = {
   actualizar: async () => {
     const { data } = await apiClient.post<
       StandardResponse<{
-        message: string
-        tipoCambio: TipoCambio
-        fuente: string
+        mensaje: string
+        tipo_cambio: TipoCambio
       }>
     >('/tipo-cambio/actualizar')
     return data

@@ -42,9 +42,10 @@ export function useActualizarTipoCambio() {
     mutationFn: tipoCambioApi.actualizar,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['tipo-cambio'] })
+      const tc = data.data.tipo_cambio
       showSuccessToast(
         'Tipo de cambio actualizado',
-        `Fuente: ${data.data.fuente} - $${data.data.tipoCambio.valor_venta_usd_ars}`
+        `Fuente: ${tc.fuente} - $${tc.valor_venta_usd_ars}`
       )
     },
     onError: (error) => {
