@@ -119,7 +119,7 @@ function calcularIngresosRecurrentesPeriodo(
     if (fechaInicio && fechaInicio > end) return
     if (fechaFin && fechaFin < start) return
 
-    const montoArs = ingreso.monto_ars || 0
+    const montoArs = Number(ingreso.monto_ars) || 0
 
     // Calcular según frecuencia y período
     switch (frecNombre) {
@@ -183,7 +183,7 @@ export default function SaludFinancieraPage() {
         const fecha = parseISO(ing.fecha)
         return isWithinInterval(fecha, { start, end })
       })
-      .reduce((sum, ing) => sum + (ing.monto_ars || 0), 0)
+      .reduce((sum, ing) => sum + (Number(ing.monto_ars) || 0), 0)
 
     // Ingresos recurrentes calculados
     const ingresosRecurrentesEnPeriodo = calcularIngresosRecurrentesPeriodo(
@@ -197,18 +197,18 @@ export default function SaludFinancieraPage() {
 
   // Calcular métricas financieras
   const metricas = useMemo(() => {
-    const gastos = salud?.totales?.total_ars || 0
-    const ingresos = ingresosPeriodo
+    const gastos = Number(salud?.totales?.total_ars) || 0
+    const ingresos = Number(ingresosPeriodo) || 0
     const balance = ingresos - gastos
     const tasaAhorro = ingresos > 0 ? (balance / ingresos) * 100 : 0
     const ratioCobertura = gastos > 0 ? ingresos / gastos : (ingresos > 0 ? Infinity : 1)
 
     return {
-      ingresos,
-      gastos,
-      balance,
-      tasaAhorro,
-      ratioCobertura,
+      ingresos: isNaN(ingresos) ? 0 : ingresos,
+      gastos: isNaN(gastos) ? 0 : gastos,
+      balance: isNaN(balance) ? 0 : balance,
+      tasaAhorro: isNaN(tasaAhorro) ? 0 : tasaAhorro,
+      ratioCobertura: isNaN(ratioCobertura) ? 1 : ratioCobertura,
     }
   }, [salud, ingresosPeriodo])
 
