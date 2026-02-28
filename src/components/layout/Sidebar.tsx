@@ -20,6 +20,7 @@ import {
   Zap,
   Wallet,
   CalendarDays,
+  Settings,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/lib/auth/authContext'
@@ -61,6 +62,7 @@ const navigationSections = [
   {
     title: null,
     items: [
+      { name: 'Configuracion', href: '/configuracion', icon: Settings },
       { name: 'Perfil', href: '/perfil', icon: User },
     ],
   },
