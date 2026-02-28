@@ -1,6 +1,7 @@
 // src/lib/hooks/useTarjetas.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { tarjetasApi } from '@/lib/api/endpoints/tarjetas'
+import { analytics } from '@/lib/analytics'
 import type { Tarjeta } from '@/types'
 
 const QUERY_KEY = 'tarjetas'
@@ -25,7 +26,8 @@ export function useCreateTarjeta() {
 
   return useMutation({
     mutationFn: (tarjeta: Partial<Tarjeta>) => tarjetasApi.createTarjeta(tarjeta),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      analytics.tarjetaCreada(variables.tipo)
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
     },
   })

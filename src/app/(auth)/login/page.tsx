@@ -8,6 +8,7 @@ import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth/authContext'
 import { loginSchema, type LoginFormData } from '@/lib/validations/authSchema'
 import { handleApiError } from '@/lib/utils/errorHandler'
+import { analytics } from '@/lib/analytics'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -47,6 +48,7 @@ function LoginForm() {
       setIsLoading(true)
       setError('')
       await login(data.email, data.password)
+      analytics.login()
     } catch (err) {
       setError(handleApiError(err))
     } finally {

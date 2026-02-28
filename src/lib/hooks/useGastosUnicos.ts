@@ -1,6 +1,7 @@
 // src/lib/hooks/useGastosUnicos.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { gastosApi } from '@/lib/api/endpoints/gastos'
+import { analytics } from '@/lib/analytics'
 import type { GastoUnico } from '@/types'
 
 const QUERY_KEY = 'gastos-unicos'
@@ -33,7 +34,8 @@ export function useCreateGastoUnico() {
 
   return useMutation({
     mutationFn: (gasto: Partial<GastoUnico>) => gastosApi.createGastoUnico(gasto),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      analytics.gastoCreado(undefined, variables.monto)
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: ['gastos'] })
     },
@@ -47,6 +49,7 @@ export function useUpdateGastoUnico() {
     mutationFn: ({ id, data }: { id: number; data: Partial<GastoUnico> }) =>
       gastosApi.updateGastoUnico(id, data),
     onSuccess: () => {
+      analytics.gastoEditado()
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: ['gastos'] })
     },
@@ -59,6 +62,7 @@ export function useDeleteGastoUnico() {
   return useMutation({
     mutationFn: (id: number) => gastosApi.deleteGastoUnico(id),
     onSuccess: () => {
+      analytics.gastoEliminado()
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: ['gastos'] })
     },

@@ -1,6 +1,7 @@
 // src/lib/hooks/useCompras.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { comprasApi } from '@/lib/api/endpoints/compras'
+import { analytics } from '@/lib/analytics'
 import type { Compra } from '@/types'
 
 const QUERY_KEY = 'compras'
@@ -33,7 +34,8 @@ export function useCreateCompra() {
 
   return useMutation({
     mutationFn: (compra: Partial<Compra>) => comprasApi.createCompra(compra),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      analytics.compraCreada(variables.cuotas_totales)
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: ['gastos'] })
     },
