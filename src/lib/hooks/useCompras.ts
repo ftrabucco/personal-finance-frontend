@@ -35,7 +35,7 @@ export function useCreateCompra() {
   return useMutation({
     mutationFn: (compra: Partial<Compra>) => comprasApi.createCompra(compra),
     onSuccess: (_, variables) => {
-      analytics.compraCreada(variables.cuotas_totales)
+      analytics.compraCreada(variables.cantidad_cuotas)
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: ['gastos'] })
     },
