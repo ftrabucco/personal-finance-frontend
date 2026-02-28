@@ -117,6 +117,11 @@ export default function DashboardPage() {
     0
   )
 
+  const totalGastosDelMesUSD = gastosDelMes.reduce(
+    (sum, gasto) => sum + parseFloat(gasto.monto_usd || '0'),
+    0
+  )
+
   const totalGastosDelMesAnterior = gastosDelMesAnterior.reduce(
     (sum, gasto) => sum + parseFloat(gasto.monto_ars),
     0
@@ -141,32 +146,43 @@ export default function DashboardPage() {
     0
   )
 
+  const totalIngresosUnicosDelMesUSD = ingresosUnicosDelMes.reduce(
+    (sum, ingreso) => sum + parseFloat(String(ingreso.monto_usd || 0)),
+    0
+  )
+
   // Ingresos recurrentes activos del mes actual (verifica fecha_inicio y fecha_fin)
-  const totalIngresosRecurrentesMensual = useMemo(() =>
-    ingresosRecurrentes
-      .filter((i) => {
-        if (!i.activo) return false
-        // Verificar que fecha_inicio sea anterior o igual al inicio del mes actual
-        if (i.fecha_inicio) {
-          const fechaInicio = new Date(i.fecha_inicio)
-          if (fechaInicio > endOfCurrentMonth) return false
-        }
-        // Verificar que fecha_fin (si existe) sea posterior o igual al inicio del mes actual
-        if (i.fecha_fin) {
-          const fechaFin = new Date(i.fecha_fin)
-          if (fechaFin < startOfCurrentMonth) return false
-        }
-        return true
-      })
-      .reduce((sum, i) => sum + parseFloat(String(i.monto_ars || 0)), 0),
+  const ingresosRecurrentesActivos = useMemo(() =>
+    ingresosRecurrentes.filter((i) => {
+      if (!i.activo) return false
+      if (i.fecha_inicio) {
+        const fechaInicio = new Date(i.fecha_inicio)
+        if (fechaInicio > endOfCurrentMonth) return false
+      }
+      if (i.fecha_fin) {
+        const fechaFin = new Date(i.fecha_fin)
+        if (fechaFin < startOfCurrentMonth) return false
+      }
+      return true
+    }),
     [ingresosRecurrentes, startOfCurrentMonth, endOfCurrentMonth]
+  )
+
+  const totalIngresosRecurrentesMensual = ingresosRecurrentesActivos.reduce(
+    (sum, i) => sum + parseFloat(String(i.monto_ars || 0)), 0
+  )
+
+  const totalIngresosRecurrentesMensualUSD = ingresosRecurrentesActivos.reduce(
+    (sum, i) => sum + parseFloat(String(i.monto_usd || 0)), 0
   )
 
   // Total ingresos del mes (únicos + recurrentes activos)
   const totalIngresosDelMes = totalIngresosUnicosDelMes + totalIngresosRecurrentesMensual
+  const totalIngresosDelMesUSD = totalIngresosUnicosDelMesUSD + totalIngresosRecurrentesMensualUSD
 
   // Balance neto
   const balanceNeto = totalIngresosDelMes - totalGastosDelMes
+  const balanceNetoUSD = totalIngresosDelMesUSD - totalGastosDelMesUSD
 
   // Tasa de ahorro
   const tasaAhorro = totalIngresosDelMes > 0
@@ -253,16 +269,17 @@ export default function DashboardPage() {
   const debitosActivos = debitos.filter((d) => d.activo).length
 
   // Promedio mensual proyectado (gastos fijos)
-  const gastosFijosProyectados = useMemo(() => {
-    const recurrentes = gastosRecurrentes
-      .filter((g) => g.activo)
-      .reduce((sum, g) => sum + g.monto, 0)
+  const gastosFijos = useMemo(() => {
+    const recurrentesActivos = gastosRecurrentes.filter((g) => g.activo)
+    const debitosActivos = debitos.filter((d) => d.activo)
 
-    const debitosSum = debitos
-      .filter((d) => d.activo)
-      .reduce((sum, d) => sum + d.monto, 0)
+    const totalARS = recurrentesActivos.reduce((sum, g) => sum + (g.monto_ars || g.monto || 0), 0)
+      + debitosActivos.reduce((sum, d) => sum + (d.monto_ars || d.monto || 0), 0)
 
-    return recurrentes + debitosSum
+    const totalUSD = recurrentesActivos.reduce((sum, g) => sum + (g.monto_usd || 0), 0)
+      + debitosActivos.reduce((sum, d) => sum + (d.monto_usd || 0), 0)
+
+    return { ars: totalARS, usd: totalUSD }
   }, [gastosRecurrentes, debitos])
 
   return (
@@ -355,10 +372,15 @@ export default function DashboardPage() {
             <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalGastosDelMes)}>
-              {formatCurrencyCompact(totalGastosDelMes)}
+            <div className="space-y-1">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalGastosDelMes)}>
+                {formatCurrencyCompact(totalGastosDelMes)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {formatCurrencyCompact(totalGastosDelMesUSD, 'USD')}
+              </div>
             </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
               {diferenciaPorcentual > 0 ? (
                 <TrendingUp className="h-3 w-3 text-red-500" />
               ) : diferenciaPorcentual < 0 ? (
@@ -411,10 +433,15 @@ export default function DashboardPage() {
             <Repeat className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(gastosFijosProyectados)}>
-              {formatCurrencyCompact(gastosFijosProyectados)}
+            <div className="space-y-1">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(gastosFijos.ars)}>
+                {formatCurrencyCompact(gastosFijos.ars)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {formatCurrencyCompact(gastosFijos.usd, 'USD')}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-1">
               {gastosRecurrentesActivos} recurrentes, {debitosActivos} débitos
             </p>
           </CardContent>
@@ -431,10 +458,15 @@ export default function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-green-500 shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate text-green-600" title={formatCurrency(totalIngresosDelMes)}>
-              {formatCurrencyCompact(totalIngresosDelMes)}
+            <div className="space-y-1">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate text-green-600" title={formatCurrency(totalIngresosDelMes)}>
+                {formatCurrencyCompact(totalIngresosDelMes)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {formatCurrencyCompact(totalIngresosDelMesUSD, 'USD')}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-1">
               {ingresosRecurrentes.filter(i => i.activo).length} fijos + {ingresosUnicosDelMes.length} únicos
             </p>
           </CardContent>
@@ -452,13 +484,18 @@ export default function DashboardPage() {
             )}
           </CardHeader>
           <CardContent>
-            <div
-              className={`text-lg sm:text-xl md:text-2xl font-bold truncate ${balanceNeto >= 0 ? 'text-green-600' : 'text-red-600'}`}
-              title={formatCurrency(Math.abs(balanceNeto))}
-            >
-              {balanceNeto >= 0 ? '+' : '-'}{formatCurrencyCompact(Math.abs(balanceNeto))}
+            <div className="space-y-1">
+              <div
+                className={`text-lg sm:text-xl md:text-2xl font-bold truncate ${balanceNeto >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                title={formatCurrency(Math.abs(balanceNeto))}
+              >
+                {balanceNeto >= 0 ? '+' : '-'}{formatCurrencyCompact(Math.abs(balanceNeto))}
+              </div>
+              <div className={`text-sm ${balanceNetoUSD >= 0 ? 'text-green-600/70' : 'text-red-600/70'}`}>
+                {balanceNetoUSD >= 0 ? '+' : '-'}{formatCurrencyCompact(Math.abs(balanceNetoUSD), 'USD')}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-1">
               Ingresos - Gastos
             </p>
           </CardContent>

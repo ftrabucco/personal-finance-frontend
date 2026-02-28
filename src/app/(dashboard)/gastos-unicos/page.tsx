@@ -171,29 +171,25 @@ function GastosUnicosContent() {
         </Button>
       </div>
 
-      {/* Cards con totales en ambas monedas */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+      {/* Cards con totales */}
+      <div className="grid grid-cols-2 gap-3 md:gap-4">
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total ARS</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Gastos</CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalARS)}>{formatCurrencyCompact(totalARS)}</div>
-            <p className="text-xs text-muted-foreground">
-              Gastos en pesos argentinos
+            <div className="space-y-1">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalARS)}>
+                {formatCurrencyCompact(totalARS)}
+              </div>
+              <div className="text-sm text-muted-foreground" title={`US$ ${totalUSD.toFixed(2)}`}>
+                {formatCurrencyCompact(totalUSD, 'USD')}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Suma de todos los gastos
             </p>
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total USD</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={`US$ ${totalUSD.toFixed(2)}`}>{formatCurrencyCompact(totalUSD, 'USD')}</div>
-            <p className="text-xs text-muted-foreground">Gastos en dólares</p>
           </CardContent>
         </Card>
 

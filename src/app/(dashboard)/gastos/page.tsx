@@ -217,6 +217,11 @@ export default function GastosPage() {
     0
   )
 
+  const totalGastosUSD = filteredGastos.reduce(
+    (sum, gasto) => sum + parseFloat(gasto.monto_usd || '0'),
+    0
+  )
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -245,10 +250,15 @@ export default function GastosPage() {
             <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalGastos)}>
-              {formatCurrencyCompact(totalGastos)}
+            <div className="space-y-1">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalGastos)}>
+                {formatCurrencyCompact(totalGastos)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {formatCurrencyCompact(totalGastosUSD, 'USD')}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-1">
               {filteredGastos.length} gastos
             </p>
           </CardContent>
