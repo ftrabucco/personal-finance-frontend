@@ -137,4 +137,34 @@ export const analytics = {
       category: "auth",
     });
   },
+
+  // Categorías
+  categoriaCreada: () => {
+    trackEvent({
+      action: "crear_categoria",
+      category: "configuracion",
+    });
+  },
+
+  categoriaEliminada: () => {
+    trackEvent({
+      action: "eliminar_categoria",
+      category: "configuracion",
+    });
+  },
+
+  // Fuentes de Ingreso
+  fuenteIngresoCreada: () => {
+    trackEvent({
+      action: "crear_fuente_ingreso",
+      category: "configuracion",
+    });
+  },
+
+  fuenteIngresoEliminada: () => {
+    trackEvent({
+      action: "eliminar_fuente_ingreso",
+      category: "configuracion",
+    });
+  },
 };

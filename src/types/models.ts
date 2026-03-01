@@ -154,6 +154,14 @@ export interface Tarjeta {
 export interface Categoria {
   id: number
   nombre_categoria: string
+  usuario_id: number | null  // null = categoría del sistema
+  activo: boolean
+  orden: number
+  icono: string | null
+  // Metadata calculada por el backend
+  es_sistema?: boolean
+  puede_eliminar?: boolean
+  visible?: boolean  // visibility preference (for system categories uses user prefs, for user categories uses activo)
 }
 
 export interface Importancia {
@@ -192,6 +200,14 @@ export type Moneda = 'ARS' | 'USD'
 export interface FuenteIngreso {
   id: number
   nombre: string
+  usuario_id: number | null  // null = fuente del sistema
+  activo: boolean
+  orden: number
+  icono: string | null
+  // Metadata calculada por el backend
+  es_sistema?: boolean
+  puede_eliminar?: boolean
+  visible?: boolean  // visibility preference (for system sources uses user prefs, for user sources uses activo)
 }
 
 // Ingreso Único

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Home, Receipt, Plus, BarChart3, User } from 'lucide-react'
+import { Home, Receipt, Plus, BarChart3, User, TrendingDown, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
 import {
   Dialog,
@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { CreditCard, ShoppingCart, Repeat, Wallet } from 'lucide-react'
+import { CreditCard, ShoppingCart, Repeat, Wallet, Banknote, CalendarDays } from 'lucide-react'
 
 const navItems = [
   { name: 'Inicio', href: '/', icon: Home },
@@ -22,11 +22,16 @@ const navItems = [
   { name: 'Perfil', href: '/perfil', icon: User },
 ]
 
-const quickAddOptions = [
+const gastoOptions = [
   { name: 'Gasto Único', href: '/gastos-unicos?new=true', icon: Wallet, description: 'Un gasto puntual' },
   { name: 'Compra en Cuotas', href: '/compras?new=true', icon: ShoppingCart, description: 'Pago en cuotas' },
   { name: 'Gasto Recurrente', href: '/gastos-recurrentes?new=true', icon: Repeat, description: 'Se repite cada mes' },
   { name: 'Débito Automático', href: '/debitos-automaticos?new=true', icon: CreditCard, description: 'Débito de cuenta' },
+]
+
+const ingresoOptions = [
+  { name: 'Ingreso Único', href: '/ingresos-unicos?new=true', icon: Banknote, description: 'Un ingreso puntual' },
+  { name: 'Ingreso Recurrente', href: '/ingresos-recurrentes?new=true', icon: CalendarDays, description: 'Sueldo, renta, etc.' },
 ]
 
 export function BottomNav() {
@@ -76,32 +81,74 @@ export function BottomNav() {
 
       {/* Quick Add Dialog */}
       <Dialog open={quickAddOpen} onOpenChange={setQuickAddOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nuevo registro</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-3 py-4">
-            {quickAddOptions.map((option) => {
-              const Icon = option.icon
-              return (
-                <Link
-                  key={option.name}
-                  href={option.href}
-                  onClick={() => setQuickAddOpen(false)}
-                >
-                  <Button
-                    variant="outline"
-                    className="h-auto w-full flex-col gap-2 p-4 hover:bg-accent"
+
+          {/* Gastos Section */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <TrendingDown className="h-4 w-4 text-destructive" />
+              <span>Gastos</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {gastoOptions.map((option) => {
+                const Icon = option.icon
+                return (
+                  <Link
+                    key={option.name}
+                    href={option.href}
+                    onClick={() => setQuickAddOpen(false)}
                   >
-                    <Icon className="h-6 w-6" />
-                    <div className="text-center">
-                      <div className="text-sm font-medium">{option.name}</div>
-                      <div className="text-xs text-muted-foreground">{option.description}</div>
-                    </div>
-                  </Button>
-                </Link>
-              )
-            })}
+                    <Button
+                      variant="outline"
+                      className="h-auto w-full flex-col gap-1.5 p-3 hover:bg-destructive/5 hover:border-destructive/30"
+                    >
+                      <Icon className="h-5 w-5 text-destructive" />
+                      <div className="text-center">
+                        <div className="text-xs font-medium">{option.name}</div>
+                        <div className="text-[10px] text-muted-foreground leading-tight">{option.description}</div>
+                      </div>
+                    </Button>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t my-2" />
+
+          {/* Ingresos Section */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <TrendingUp className="h-4 w-4 text-green-600" />
+              <span>Ingresos</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {ingresoOptions.map((option) => {
+                const Icon = option.icon
+                return (
+                  <Link
+                    key={option.name}
+                    href={option.href}
+                    onClick={() => setQuickAddOpen(false)}
+                  >
+                    <Button
+                      variant="outline"
+                      className="h-auto w-full flex-col gap-1.5 p-3 hover:bg-green-500/5 hover:border-green-500/30"
+                    >
+                      <Icon className="h-5 w-5 text-green-600" />
+                      <div className="text-center">
+                        <div className="text-xs font-medium">{option.name}</div>
+                        <div className="text-[10px] text-muted-foreground leading-tight">{option.description}</div>
+                      </div>
+                    </Button>
+                  </Link>
+                )
+              })}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
