@@ -23,7 +23,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import {
   useCategoriasEditables,
   useCreateCategoria,
@@ -54,7 +54,6 @@ interface FuenteFormData {
 }
 
 export default function ConfiguracionPage() {
-  const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('categorias')
   const [showInactive, setShowInactive] = useState(false)
 
@@ -93,11 +92,7 @@ export default function ConfiguracionPage() {
 
   const handleEditCategoria = (categoria: Categoria) => {
     if (categoria.es_sistema) {
-      toast({
-        title: 'No permitido',
-        description: 'Las categorias del sistema no se pueden editar',
-        variant: 'destructive',
-      })
+      toast.error('Las categorias del sistema no se pueden editar')
       return
     }
     setEditingCategoria(categoria)
@@ -110,45 +105,37 @@ export default function ConfiguracionPage() {
 
   const handleDeleteCategoria = async (categoria: Categoria) => {
     if (categoria.es_sistema) {
-      toast({
-        title: 'No permitido',
-        description: 'Las categorias del sistema no se pueden eliminar',
-        variant: 'destructive',
-      })
+      toast.error('Las categorias del sistema no se pueden eliminar')
       return
     }
     if (window.confirm(`¿Eliminar la categoria "${categoria.nombre_categoria}"?`)) {
       try {
         await deleteCategoriaMutation.mutateAsync(categoria.id)
-        toast({ title: 'Categoria eliminada' })
+        toast.success('Categoria eliminada')
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Error al eliminar'
-        toast({ title: 'Error', description: errorMessage, variant: 'destructive' })
+        toast.error(errorMessage)
       }
     }
   }
 
   const handleToggleCategoria = async (categoria: Categoria) => {
     if (categoria.es_sistema) {
-      toast({
-        title: 'No permitido',
-        description: 'Las categorias del sistema no se pueden ocultar (por ahora)',
-        variant: 'destructive',
-      })
+      toast.error('Las categorias del sistema no se pueden ocultar (por ahora)')
       return
     }
     try {
       await toggleCategoriaMutation.mutateAsync(categoria.id)
-      toast({ title: categoria.activo ? 'Categoria ocultada' : 'Categoria visible' })
+      toast.success(categoria.activo ? 'Categoria ocultada' : 'Categoria visible')
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error al cambiar estado'
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' })
+      toast.error(errorMessage)
     }
   }
 
   const handleSubmitCategoria = async () => {
     if (!categoriaForm.nombre_categoria.trim()) {
-      toast({ title: 'Error', description: 'El nombre es requerido', variant: 'destructive' })
+      toast.error('El nombre es requerido')
       return
     }
     try {
@@ -160,19 +147,19 @@ export default function ConfiguracionPage() {
             icono: categoriaForm.icono || undefined,
           },
         })
-        toast({ title: 'Categoria actualizada' })
+        toast.success('Categoria actualizada')
       } else {
         await createCategoriaMutation.mutateAsync({
           nombre_categoria: categoriaForm.nombre_categoria,
           icono: categoriaForm.icono || undefined,
         })
-        toast({ title: 'Categoria creada' })
+        toast.success('Categoria creada')
       }
       setIsCategoriaDialogOpen(false)
       setEditingCategoria(null)
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error al guardar'
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' })
+      toast.error(errorMessage)
     }
   }
 
@@ -185,11 +172,7 @@ export default function ConfiguracionPage() {
 
   const handleEditFuente = (fuente: FuenteIngreso) => {
     if (fuente.es_sistema) {
-      toast({
-        title: 'No permitido',
-        description: 'Las fuentes del sistema no se pueden editar',
-        variant: 'destructive',
-      })
+      toast.error('Las fuentes del sistema no se pueden editar')
       return
     }
     setEditingFuente(fuente)
@@ -202,45 +185,37 @@ export default function ConfiguracionPage() {
 
   const handleDeleteFuente = async (fuente: FuenteIngreso) => {
     if (fuente.es_sistema) {
-      toast({
-        title: 'No permitido',
-        description: 'Las fuentes del sistema no se pueden eliminar',
-        variant: 'destructive',
-      })
+      toast.error('Las fuentes del sistema no se pueden eliminar')
       return
     }
     if (window.confirm(`¿Eliminar la fuente "${fuente.nombre}"?`)) {
       try {
         await deleteFuenteMutation.mutateAsync(fuente.id)
-        toast({ title: 'Fuente eliminada' })
+        toast.success('Fuente eliminada')
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Error al eliminar'
-        toast({ title: 'Error', description: errorMessage, variant: 'destructive' })
+        toast.error(errorMessage)
       }
     }
   }
 
   const handleToggleFuente = async (fuente: FuenteIngreso) => {
     if (fuente.es_sistema) {
-      toast({
-        title: 'No permitido',
-        description: 'Las fuentes del sistema no se pueden ocultar (por ahora)',
-        variant: 'destructive',
-      })
+      toast.error('Las fuentes del sistema no se pueden ocultar (por ahora)')
       return
     }
     try {
       await toggleFuenteMutation.mutateAsync(fuente.id)
-      toast({ title: fuente.activo ? 'Fuente ocultada' : 'Fuente visible' })
+      toast.success(fuente.activo ? 'Fuente ocultada' : 'Fuente visible')
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error al cambiar estado'
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' })
+      toast.error(errorMessage)
     }
   }
 
   const handleSubmitFuente = async () => {
     if (!fuenteForm.nombre.trim()) {
-      toast({ title: 'Error', description: 'El nombre es requerido', variant: 'destructive' })
+      toast.error('El nombre es requerido')
       return
     }
     try {
@@ -252,19 +227,19 @@ export default function ConfiguracionPage() {
             icono: fuenteForm.icono || undefined,
           },
         })
-        toast({ title: 'Fuente actualizada' })
+        toast.success('Fuente actualizada')
       } else {
         await createFuenteMutation.mutateAsync({
           nombre: fuenteForm.nombre,
           icono: fuenteForm.icono || undefined,
         })
-        toast({ title: 'Fuente creada' })
+        toast.success('Fuente creada')
       }
       setIsFuenteDialogOpen(false)
       setEditingFuente(null)
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error al guardar'
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' })
+      toast.error(errorMessage)
     }
   }
 
