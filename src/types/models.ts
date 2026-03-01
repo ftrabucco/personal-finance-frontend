@@ -161,6 +161,7 @@ export interface Categoria {
   // Metadata calculada por el backend
   es_sistema?: boolean
   puede_eliminar?: boolean
+  visible?: boolean  // visibility preference (for system categories uses user prefs, for user categories uses activo)
 }
 
 export interface Importancia {
@@ -206,6 +207,7 @@ export interface FuenteIngreso {
   // Metadata calculada por el backend
   es_sistema?: boolean
   puede_eliminar?: boolean
+  visible?: boolean  // visibility preference (for system sources uses user prefs, for user sources uses activo)
 }
 
 // Ingreso Único

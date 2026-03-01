@@ -120,13 +120,10 @@ export default function ConfiguracionPage() {
   }
 
   const handleToggleCategoria = async (categoria: Categoria) => {
-    if (categoria.es_sistema) {
-      toast.error('Las categorias del sistema no se pueden ocultar (por ahora)')
-      return
-    }
     try {
       await toggleCategoriaMutation.mutateAsync(categoria.id)
-      toast.success(categoria.activo ? 'Categoria ocultada' : 'Categoria visible')
+      const isCurrentlyVisible = categoria.visible ?? categoria.activo
+      toast.success(isCurrentlyVisible ? 'Categoria ocultada' : 'Categoria visible')
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error al cambiar estado'
       toast.error(errorMessage)
@@ -200,13 +197,10 @@ export default function ConfiguracionPage() {
   }
 
   const handleToggleFuente = async (fuente: FuenteIngreso) => {
-    if (fuente.es_sistema) {
-      toast.error('Las fuentes del sistema no se pueden ocultar (por ahora)')
-      return
-    }
     try {
       await toggleFuenteMutation.mutateAsync(fuente.id)
-      toast.success(fuente.activo ? 'Fuente ocultada' : 'Fuente visible')
+      const isCurrentlyVisible = fuente.visible ?? fuente.activo
+      toast.success(isCurrentlyVisible ? 'Fuente ocultada' : 'Fuente visible')
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Error al cambiar estado'
       toast.error(errorMessage)
@@ -299,10 +293,12 @@ export default function ConfiguracionPage() {
                 <>
                   {/* Mobile view */}
                   <div className="space-y-2 md:hidden">
-                    {categorias.map((cat) => (
+                    {categorias.map((cat) => {
+                      const isVisible = cat.visible ?? cat.activo
+                      return (
                       <div
                         key={cat.id}
-                        className={`flex items-center justify-between rounded-lg border p-3 ${!cat.activo ? 'opacity-50' : ''}`}
+                        className={`flex items-center justify-between rounded-lg border p-3 ${!isVisible ? 'opacity-50' : ''}`}
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-xl">{cat.icono || '📦'}</span>
@@ -315,25 +311,27 @@ export default function ConfiguracionPage() {
                                   Sistema
                                 </Badge>
                               )}
-                              {!cat.activo && <Badge variant="outline" className="text-xs">Oculta</Badge>}
+                              {!isVisible && <Badge variant="outline" className="text-xs">Oculta</Badge>}
                             </div>
                           </div>
                         </div>
-                        {!cat.es_sistema && (
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleToggleCategoria(cat)}>
-                              {cat.activo ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleEditCategoria(cat)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteCategoria(cat)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        )}
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleToggleCategoria(cat)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
+                            {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                          {!cat.es_sistema && (
+                            <>
+                              <Button variant="ghost" size="icon" onClick={() => handleEditCategoria(cat)} title="Editar">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteCategoria(cat)} title="Eliminar">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
 
                   {/* Desktop view */}
@@ -349,8 +347,10 @@ export default function ConfiguracionPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {categorias.map((cat) => (
-                          <TableRow key={cat.id} className={!cat.activo ? 'opacity-50' : ''}>
+                        {categorias.map((cat) => {
+                          const isVisible = cat.visible ?? cat.activo
+                          return (
+                          <TableRow key={cat.id} className={!isVisible ? 'opacity-50' : ''}>
                             <TableCell className="text-xl">{cat.icono || '📦'}</TableCell>
                             <TableCell className="font-medium">{cat.nombre_categoria}</TableCell>
                             <TableCell>
@@ -364,27 +364,29 @@ export default function ConfiguracionPage() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={cat.activo ? 'default' : 'secondary'}>
-                                {cat.activo ? 'Activa' : 'Oculta'}
+                              <Badge variant={isVisible ? 'default' : 'secondary'}>
+                                {isVisible ? 'Activa' : 'Oculta'}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              {!cat.es_sistema && (
-                                <div className="flex justify-end gap-2">
-                                  <Button variant="ghost" size="sm" onClick={() => handleToggleCategoria(cat)}>
-                                    {cat.activo ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleEditCategoria(cat)}>
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleDeleteCategoria(cat)}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </div>
-                              )}
+                              <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => handleToggleCategoria(cat)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
+                                  {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
+                                {!cat.es_sistema && (
+                                  <>
+                                    <Button variant="ghost" size="sm" onClick={() => handleEditCategoria(cat)} title="Editar">
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => handleDeleteCategoria(cat)} title="Eliminar">
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
-                        ))}
+                        )})}
                       </TableBody>
                     </Table>
                   </div>
@@ -419,10 +421,12 @@ export default function ConfiguracionPage() {
                 <>
                   {/* Mobile view */}
                   <div className="space-y-2 md:hidden">
-                    {fuentes.map((fuente) => (
+                    {fuentes.map((fuente) => {
+                      const isVisible = fuente.visible ?? fuente.activo
+                      return (
                       <div
                         key={fuente.id}
-                        className={`flex items-center justify-between rounded-lg border p-3 ${!fuente.activo ? 'opacity-50' : ''}`}
+                        className={`flex items-center justify-between rounded-lg border p-3 ${!isVisible ? 'opacity-50' : ''}`}
                       >
                         <div className="flex items-center gap-3">
                           <span className="text-xl">{fuente.icono || '💰'}</span>
@@ -435,25 +439,27 @@ export default function ConfiguracionPage() {
                                   Sistema
                                 </Badge>
                               )}
-                              {!fuente.activo && <Badge variant="outline" className="text-xs">Oculta</Badge>}
+                              {!isVisible && <Badge variant="outline" className="text-xs">Oculta</Badge>}
                             </div>
                           </div>
                         </div>
-                        {!fuente.es_sistema && (
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleToggleFuente(fuente)}>
-                              {fuente.activo ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleEditFuente(fuente)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteFuente(fuente)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        )}
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleToggleFuente(fuente)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
+                            {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                          {!fuente.es_sistema && (
+                            <>
+                              <Button variant="ghost" size="icon" onClick={() => handleEditFuente(fuente)} title="Editar">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteFuente(fuente)} title="Eliminar">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
 
                   {/* Desktop view */}
@@ -469,8 +475,10 @@ export default function ConfiguracionPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {fuentes.map((fuente) => (
-                          <TableRow key={fuente.id} className={!fuente.activo ? 'opacity-50' : ''}>
+                        {fuentes.map((fuente) => {
+                          const isVisible = fuente.visible ?? fuente.activo
+                          return (
+                          <TableRow key={fuente.id} className={!isVisible ? 'opacity-50' : ''}>
                             <TableCell className="text-xl">{fuente.icono || '💰'}</TableCell>
                             <TableCell className="font-medium">{fuente.nombre}</TableCell>
                             <TableCell>
@@ -484,27 +492,29 @@ export default function ConfiguracionPage() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={fuente.activo ? 'default' : 'secondary'}>
-                                {fuente.activo ? 'Activa' : 'Oculta'}
+                              <Badge variant={isVisible ? 'default' : 'secondary'}>
+                                {isVisible ? 'Activa' : 'Oculta'}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              {!fuente.es_sistema && (
-                                <div className="flex justify-end gap-2">
-                                  <Button variant="ghost" size="sm" onClick={() => handleToggleFuente(fuente)}>
-                                    {fuente.activo ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleEditFuente(fuente)}>
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleDeleteFuente(fuente)}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </div>
-                              )}
+                              <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => handleToggleFuente(fuente)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
+                                  {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
+                                {!fuente.es_sistema && (
+                                  <>
+                                    <Button variant="ghost" size="sm" onClick={() => handleEditFuente(fuente)} title="Editar">
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => handleDeleteFuente(fuente)} title="Eliminar">
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
-                        ))}
+                        )})}
                       </TableBody>
                     </Table>
                   </div>

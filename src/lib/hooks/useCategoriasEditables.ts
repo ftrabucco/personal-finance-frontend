@@ -28,7 +28,7 @@ export function useCreateCategoria() {
   return useMutation({
     mutationFn: (input: CreateCategoriaInput) => categoriasApi.createCategoria(input),
     onSuccess: () => {
-      analytics.track('categoria_created')
+      analytics.categoriaCreada()
       // Invalidate both the editable categories and the catalogos cache
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: [CATALOGOS_KEY] })
@@ -79,7 +79,7 @@ export function useDeleteCategoria() {
   return useMutation({
     mutationFn: (id: number) => categoriasApi.deleteCategoria(id),
     onSuccess: () => {
-      analytics.track('categoria_deleted')
+      analytics.categoriaEliminada()
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: [CATALOGOS_KEY] })
     },

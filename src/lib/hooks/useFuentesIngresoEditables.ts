@@ -28,7 +28,7 @@ export function useCreateFuenteIngreso() {
   return useMutation({
     mutationFn: (input: CreateFuenteIngresoInput) => fuentesIngresoApi.createFuenteIngreso(input),
     onSuccess: () => {
-      analytics.track('fuente_ingreso_created')
+      analytics.fuenteIngresoCreada()
       // Invalidate both the editable fuentes and the catalogos cache
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: [CATALOGOS_KEY] })
@@ -79,7 +79,7 @@ export function useDeleteFuenteIngreso() {
   return useMutation({
     mutationFn: (id: number) => fuentesIngresoApi.deleteFuenteIngreso(id),
     onSuccess: () => {
-      analytics.track('fuente_ingreso_deleted')
+      analytics.fuenteIngresoEliminada()
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: [CATALOGOS_KEY] })
     },
