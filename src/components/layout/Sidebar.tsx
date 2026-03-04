@@ -40,15 +40,15 @@ const navigationSections = [
       { name: 'Historial', href: '/gastos', icon: History },
       { name: 'Nuevo Gasto', href: '/gastos-unicos', icon: PlusCircle },
       { name: 'Cuotas', href: '/compras', icon: ShoppingCart },
-      { name: 'Pagos Fijos', href: '/gastos-recurrentes', icon: Repeat },
-      { name: 'Débitos', href: '/debitos-automaticos', icon: Zap },
+      { name: 'Gastos Recurrentes', href: '/gastos-recurrentes', icon: Repeat },
+      { name: 'Débitos Automáticos', href: '/debitos-automaticos', icon: Zap },
     ],
   },
   {
     title: 'Ingresos',
     items: [
       { name: 'Ingreso Único', href: '/ingresos-unicos', icon: Wallet },
-      { name: 'Ingresos Fijos', href: '/ingresos-recurrentes', icon: CalendarDays },
+      { name: 'Ingresos Recurrentes', href: '/ingresos-recurrentes', icon: CalendarDays },
     ],
   },
   {
