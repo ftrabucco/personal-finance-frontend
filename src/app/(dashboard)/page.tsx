@@ -25,6 +25,7 @@ import {
   Minus,
   Heart,
   Calendar,
+  Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTarjetas } from '@/lib/hooks/useTarjetas'
@@ -32,6 +33,7 @@ import { useAllGastos } from '@/lib/hooks/useGastos'
 import { useCompras } from '@/lib/hooks/useCompras'
 import { useGastosRecurrentes } from '@/lib/hooks/useGastosRecurrentes'
 import { useDebitosAutomaticos } from '@/lib/hooks/useDebitosAutomaticos'
+import { useGastosUnicos } from '@/lib/hooks/useGastosUnicos'
 import { useProcesarTodosPendientes } from '@/lib/hooks/useProcesamiento'
 import { useTipoCambioActual, useActualizarTipoCambio } from '@/lib/hooks/useTipoCambio'
 import { useSaludFinanciera, useProyeccion } from '@/lib/hooks/useAnalisis'
@@ -63,6 +65,7 @@ export default function DashboardPage() {
   const { data: comprasResponse } = useCompras()
   const { data: gastosRecurrentesResponse } = useGastosRecurrentes()
   const { data: debitosResponse } = useDebitosAutomaticos()
+  const { data: gastosUnicosResponse } = useGastosUnicos()
   const procesarPendientes = useProcesarTodosPendientes()
   const { data: tipoCambioResponse, isError: tipoCambioError } = useTipoCambioActual()
   const actualizarTipoCambio = useActualizarTipoCambio()
@@ -78,6 +81,7 @@ export default function DashboardPage() {
   const compras = comprasResponse?.data || []
   const gastosRecurrentes = gastosRecurrentesResponse?.data || []
   const debitos = debitosResponse?.data || []
+  const gastosUnicosList = gastosUnicosResponse?.data || []
 
   const handleProcesarPendientes = () => {
     procesarPendientes.mutate()
@@ -265,22 +269,65 @@ export default function DashboardPage() {
   }, [gastos, ingresosUnicos, ingresosRecurrentes, now])
 
   const comprasPendientes = compras.filter((c) => c.pendiente_cuotas).length
-  const gastosRecurrentesActivos = gastosRecurrentes.filter((g) => g.activo).length
-  const debitosActivos = debitos.filter((d) => d.activo).length
 
-  // Promedio mensual proyectado (gastos fijos)
-  const gastosFijos = useMemo(() => {
-    const recurrentesActivos = gastosRecurrentes.filter((g) => g.activo)
-    const debitosActivos = debitos.filter((d) => d.activo)
+  // Totales de gastos recurrentes y estado de procesamiento
+  const recurrentesStatus = useMemo(() => {
+    const activos = gastosRecurrentes.filter((g) => g.activo)
+    // Contar cuántos ya fueron procesados este mes (existen en gastosDelMes con tipo_origen='recurrente')
+    const procesadosIds = new Set(
+      gastosDelMes
+        .filter((g) => g.tipo_origen === 'recurrente')
+        .map((g) => g.id_origen)
+    )
+    const procesados = activos.filter((g) => procesadosIds.has(g.id)).length
+    const pendientes = activos.length - procesados
 
-    const totalARS = recurrentesActivos.reduce((sum, g) => sum + (g.monto_ars || g.monto || 0), 0)
-      + debitosActivos.reduce((sum, d) => sum + (d.monto_ars || d.monto || 0), 0)
+    return {
+      ars: activos.reduce((sum, g) => sum + (Number(g.monto_ars) || 0), 0),
+      usd: activos.reduce((sum, g) => sum + (Number(g.monto_usd) || 0), 0),
+      total: activos.length,
+      procesados,
+      pendientes,
+      todosProcesados: pendientes === 0 && activos.length > 0,
+    }
+  }, [gastosRecurrentes, gastosDelMes])
 
-    const totalUSD = recurrentesActivos.reduce((sum, g) => sum + (g.monto_usd || 0), 0)
-      + debitosActivos.reduce((sum, d) => sum + (d.monto_usd || 0), 0)
+  // Totales de débitos automáticos y estado de procesamiento
+  const debitosStatus = useMemo(() => {
+    const activos = debitos.filter((d) => d.activo)
+    // Contar cuántos ya fueron procesados este mes
+    const procesadosIds = new Set(
+      gastosDelMes
+        .filter((g) => g.tipo_origen === 'debito_automatico')
+        .map((g) => g.id_origen)
+    )
+    const procesados = activos.filter((d) => procesadosIds.has(d.id)).length
+    const pendientes = activos.length - procesados
 
-    return { ars: totalARS, usd: totalUSD }
-  }, [gastosRecurrentes, debitos])
+    return {
+      ars: activos.reduce((sum, d) => sum + (Number(d.monto_ars) || 0), 0),
+      usd: activos.reduce((sum, d) => sum + (Number(d.monto_usd) || 0), 0),
+      total: activos.length,
+      procesados,
+      pendientes,
+      todosProcesados: pendientes === 0 && activos.length > 0,
+    }
+  }, [debitos, gastosDelMes])
+
+  // Gastos únicos del mes actual
+  const gastosUnicosDelMes = useMemo(() =>
+    gastosUnicosList.filter((g) => {
+      const fecha = new Date(g.fecha)
+      return fecha >= startOfCurrentMonth && fecha <= endOfCurrentMonth
+    }),
+    [gastosUnicosList, startOfCurrentMonth, endOfCurrentMonth]
+  )
+
+  const totalesGastosUnicos = useMemo(() => ({
+    ars: gastosUnicosDelMes.reduce((sum, g) => sum + (Number(g.monto_ars) || 0), 0),
+    usd: gastosUnicosDelMes.reduce((sum, g) => sum + (Number(g.monto_usd) || 0), 0),
+    count: gastosUnicosDelMes.length,
+  }), [gastosUnicosDelMes])
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -363,12 +410,17 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-2 lg:grid-cols-4 md:gap-4">
-        <Card className="overflow-hidden">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6 md:gap-4">
+        <Card className="overflow-hidden border-l-4 border-l-red-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Gastos del Mes
-            </CardTitle>
+            <div className="space-y-1">
+              <CardTitle className="text-sm font-medium">
+                Gastos del Mes
+              </CardTitle>
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                Gastado
+              </Badge>
+            </div>
             <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
@@ -425,24 +477,103 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden">
+        <Card className={`overflow-hidden border-l-4 ${recurrentesStatus.todosProcesados ? 'border-l-red-500' : 'border-l-blue-500'}`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Gastos Fijos
-            </CardTitle>
+            <div className="space-y-1">
+              <CardTitle className="text-sm font-medium">
+                Gastos Recurrentes
+              </CardTitle>
+              {recurrentesStatus.todosProcesados ? (
+                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                  Gastado
+                </Badge>
+              ) : recurrentesStatus.procesados > 0 ? (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                  {recurrentesStatus.procesados}/{recurrentesStatus.total} pagos
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  Compromiso
+                </Badge>
+              )}
+            </div>
             <Repeat className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(gastosFijos.ars)}>
-                {formatCurrencyCompact(gastosFijos.ars)}
+              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(recurrentesStatus.ars)}>
+                {formatCurrencyCompact(recurrentesStatus.ars)}
               </div>
               <div className="text-sm text-muted-foreground">
-                {formatCurrencyCompact(gastosFijos.usd, 'USD')}
+                {formatCurrencyCompact(recurrentesStatus.usd, 'USD')}
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {gastosRecurrentesActivos} recurrentes, {debitosActivos} débitos
+              {recurrentesStatus.total} activos
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={`overflow-hidden border-l-4 ${debitosStatus.todosProcesados ? 'border-l-red-500' : 'border-l-blue-500'}`}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="space-y-1">
+              <CardTitle className="text-sm font-medium">
+                Débitos Automáticos
+              </CardTitle>
+              {debitosStatus.todosProcesados ? (
+                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                  Gastado
+                </Badge>
+              ) : debitosStatus.procesados > 0 ? (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                  {debitosStatus.procesados}/{debitosStatus.total} pagos
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  Compromiso
+                </Badge>
+              )}
+            </div>
+            <Zap className="h-4 w-4 text-muted-foreground shrink-0" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(debitosStatus.ars)}>
+                {formatCurrencyCompact(debitosStatus.ars)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {formatCurrencyCompact(debitosStatus.usd, 'USD')}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {debitosStatus.total} activos
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden border-l-4 border-l-red-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="space-y-1">
+              <CardTitle className="text-sm font-medium">
+                Gastos Únicos
+              </CardTitle>
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                Gastado
+              </Badge>
+            </div>
+            <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalesGastosUnicos.ars)}>
+                {formatCurrencyCompact(totalesGastosUnicos.ars)}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {formatCurrencyCompact(totalesGastosUnicos.usd, 'USD')}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {totalesGastosUnicos.count} este mes
             </p>
           </CardContent>
         </Card>

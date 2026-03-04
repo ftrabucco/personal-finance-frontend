@@ -125,11 +125,11 @@ function GastosRecurrentesContent() {
   }
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de eliminar este pago fijo?')) {
+    if (window.confirm('¿Estás seguro de eliminar este gasto recurrente?')) {
       try {
         await deleteMutation.mutateAsync(id)
       } catch (error) {
-        console.error('Error al eliminar pago fijo:', error)
+        console.error('Error al eliminar gasto recurrente:', error)
       }
     }
   }
@@ -188,7 +188,7 @@ function GastosRecurrentesContent() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            Pagos Fijos
+            Gastos Recurrentes
           </h1>
           <p className="text-sm text-muted-foreground md:text-base">
             Gastos manuales que se repiten (alquiler, expensas, gimnasio)
@@ -196,7 +196,7 @@ function GastosRecurrentesContent() {
         </div>
         <Button onClick={handleCreate} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
-          Nuevo Pago Fijo
+          Nuevo Gasto Recurrente
         </Button>
       </div>
 
@@ -218,7 +218,7 @@ function GastosRecurrentesContent() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {gastosActivos.length} pagos activos
+              {gastosActivos.length} gastos activos
             </p>
           </CardContent>
         </Card>
@@ -256,15 +256,15 @@ function GastosRecurrentesContent() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Repeat className="h-5 w-5" />
-            Listado de Pagos Fijos
+            Listado de Gastos Recurrentes
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8">Cargando pagos fijos...</div>
+            <div className="text-center py-8">Cargando gastos recurrentes...</div>
           ) : gastos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No hay pagos fijos registrados.
+              No hay gastos recurrentes registrados.
             </div>
           ) : (
             <>
@@ -479,12 +479,12 @@ function GastosRecurrentesContent() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingGasto ? 'Editar Pago Fijo' : 'Nuevo Pago Fijo'}
+              {editingGasto ? 'Editar Gasto Recurrente' : 'Nuevo Gasto Recurrente'}
             </DialogTitle>
             <DialogDescription>
               {editingGasto
-                ? 'Modifica los datos del pago fijo'
-                : 'Completa el formulario para registrar un nuevo pago fijo'}
+                ? 'Modifica los datos del gasto recurrente'
+                : 'Completa el formulario para registrar un nuevo gasto recurrente'}
             </DialogDescription>
           </DialogHeader>
           <GastoRecurrenteForm
