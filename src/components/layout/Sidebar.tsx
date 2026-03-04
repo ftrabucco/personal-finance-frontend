@@ -21,6 +21,7 @@ import {
   Wallet,
   CalendarDays,
   Settings,
+  Building2,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/lib/auth/authContext'
@@ -55,6 +56,7 @@ const navigationSections = [
     title: 'Finanzas',
     items: [
       { name: 'Tarjetas', href: '/tarjetas', icon: CreditCard },
+      { name: 'Cuentas Bancarias', href: '/cuentas-bancarias', icon: Building2 },
       { name: 'Proyecciones', href: '/proyecciones', icon: TrendingUp },
       { name: 'Salud Financiera', href: '/salud-financiera', icon: Heart },
     ],

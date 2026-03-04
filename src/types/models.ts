@@ -126,6 +126,7 @@ export interface DebitoAutomatico {
   importancia_gasto_id: number
   tipo_pago_id: number
   tarjeta_id: number | null
+  cuenta_bancaria_id: number | null // Bank account for direct debits
   frecuencia_gasto_id: number
   createdAt: string
   updatedAt: string
@@ -134,6 +135,7 @@ export interface DebitoAutomatico {
   importancia?: Importancia
   tipoPago?: TipoPago
   tarjeta?: Tarjeta
+  cuentaBancaria?: CuentaBancaria
   frecuencia?: Frecuencia
 }
 
@@ -250,4 +252,18 @@ export interface IngresoRecurrente {
   // Relaciones
   fuenteIngreso?: FuenteIngreso
   frecuencia?: Frecuencia
+}
+
+// Cuenta Bancaria
+export interface CuentaBancaria {
+  id: number
+  nombre: string
+  banco: string
+  tipo: 'ahorro' | 'corriente'
+  ultimos_4_digitos: string | null
+  moneda: Moneda
+  activa: boolean
+  usuario_id: number
+  createdAt?: string
+  updatedAt?: string
 }
