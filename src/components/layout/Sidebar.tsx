@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/lib/auth/authContext'
+import { useModulosContext } from '@/lib/context/ModulosContext'
 import { Button } from '@/components/ui/button'
 
 // Navegación agrupada por secciones
@@ -78,12 +79,23 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const pathname = usePathname()
   const { logout, user } = useAuth()
   const { theme, setTheme } = useTheme()
+  const { isRutaVisible } = useModulosContext()
   const [mounted, setMounted] = useState(false)
 
   // Avoid hydration mismatch by only rendering theme-dependent content after mount
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Filter navigation sections based on active modules
+  const filteredSections = useMemo(() => {
+    return navigationSections
+      .map(section => ({
+        ...section,
+        items: section.items.filter(item => isRutaVisible(item.href))
+      }))
+      .filter(section => section.items.length > 0)
+  }, [isRutaVisible])
 
   return (
     <div className="flex h-full w-64 flex-col border-r bg-card">
@@ -107,7 +119,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 overflow-y-auto">
-        {navigationSections.map((section, sectionIndex) => (
+        {filteredSections.map((section, sectionIndex) => (
           <div key={sectionIndex} className={section.title ? 'mt-4 first:mt-0' : ''}>
             {section.title && (
               <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">

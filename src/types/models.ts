@@ -267,3 +267,24 @@ export interface CuentaBancaria {
   createdAt?: string
   updatedAt?: string
 }
+
+// Preferencias de Usuario
+export interface PreferenciasUsuario {
+  id: number
+  usuario_id: number
+  modulos_activos: string[]
+  tema: 'light' | 'dark' | 'system'
+  created_at?: string
+  updated_at?: string
+}
+
+// Información de Módulo
+export interface ModuloInfo {
+  nombre: string
+  descripcion: string
+  core: boolean
+  activo?: boolean
+}
+
+// Mapa de módulos disponibles
+export type ModulosDisponibles = Record<string, ModuloInfo>

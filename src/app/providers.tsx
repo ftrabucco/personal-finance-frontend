@@ -6,6 +6,7 @@ import { Toaster } from 'sonner'
 import { queryClient } from '@/lib/api/queryClient'
 import { AuthProvider } from '@/lib/auth/authContext'
 import { ThemeProvider } from '@/components/providers/ThemeProvider'
+import { ModulosProvider } from '@/lib/context/ModulosContext'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -17,7 +18,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          {children}
+          <ModulosProvider>
+            {children}
+          </ModulosProvider>
           <Toaster
             position="top-right"
             richColors
@@ -36,3 +39,4 @@ export function Providers({ children }: { children: React.ReactNode }) {
     </ThemeProvider>
   )
 }
+
