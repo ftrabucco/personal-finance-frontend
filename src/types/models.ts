@@ -126,6 +126,7 @@ export interface DebitoAutomatico {
   importancia_gasto_id: number
   tipo_pago_id: number
   tarjeta_id: number | null
+  cuenta_bancaria_id: number | null // Bank account for direct debits
   frecuencia_gasto_id: number
   createdAt: string
   updatedAt: string
@@ -134,6 +135,7 @@ export interface DebitoAutomatico {
   importancia?: Importancia
   tipoPago?: TipoPago
   tarjeta?: Tarjeta
+  cuentaBancaria?: CuentaBancaria
   frecuencia?: Frecuencia
 }
 
@@ -251,3 +253,38 @@ export interface IngresoRecurrente {
   fuenteIngreso?: FuenteIngreso
   frecuencia?: Frecuencia
 }
+
+// Cuenta Bancaria
+export interface CuentaBancaria {
+  id: number
+  nombre: string
+  banco: string
+  tipo: 'ahorro' | 'corriente'
+  ultimos_4_digitos: string | null
+  moneda: Moneda
+  activa: boolean
+  usuario_id: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+// Preferencias de Usuario
+export interface PreferenciasUsuario {
+  id: number
+  usuario_id: number
+  modulos_activos: string[]
+  tema: 'light' | 'dark' | 'system'
+  created_at?: string
+  updated_at?: string
+}
+
+// Información de Módulo
+export interface ModuloInfo {
+  nombre: string
+  descripcion: string
+  core: boolean
+  activo?: boolean
+}
+
+// Mapa de módulos disponibles
+export type ModulosDisponibles = Record<string, ModuloInfo>

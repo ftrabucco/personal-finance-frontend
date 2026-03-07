@@ -7,7 +7,14 @@ import { useEffect } from 'react'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from '@/components/ui/form'
 import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CreditCard, Info } from 'lucide-react'
+import { CreditCard, Info, Building2 } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   DescripcionField,
   MontoConMonedaField,
@@ -22,6 +29,7 @@ import {
 } from '@/components/forms/fields'
 import { useCatalogosCompletos, useFrecuencias } from '@/lib/hooks/useCatalogos'
 import { useTarjetas } from '@/lib/hooks/useTarjetas'
+import { useCuentasBancarias } from '@/lib/hooks/useCuentasBancarias'
 import { useTipoCambioActual } from '@/lib/hooks/useTipoCambio'
 import type { DebitoAutomatico, Moneda } from '@/types'
 
@@ -35,6 +43,7 @@ const debitoAutomaticoSchema = z.object({
   importancia_gasto_id: z.number({ message: 'La importancia es requerida' }),
   tipo_pago_id: z.number({ message: 'El tipo de pago es requerido' }),
   tarjeta_id: z.number().nullable(),
+  cuenta_bancaria_id: z.number().nullable(),
   frecuencia_gasto_id: z.number({ message: 'La frecuencia es requerida' }),
   moneda_origen: z.enum(['ARS', 'USD'], { message: 'La moneda es requerida' }),
 })
@@ -58,6 +67,7 @@ export function DebitoAutomaticoForm({
     useCatalogosCompletos()
   const { data: frecuenciasResponse } = useFrecuencias()
   const { data: tarjetasResponse } = useTarjetas()
+  const { data: cuentasBancariasResponse } = useCuentasBancarias({ activa: true })
   const { data: tipoCambioResponse } = useTipoCambioActual()
 
   const form = useForm<DebitoAutomaticoFormValues>({
@@ -72,23 +82,41 @@ export function DebitoAutomaticoForm({
       importancia_gasto_id: initialData?.importancia_gasto_id,
       tipo_pago_id: initialData?.tipo_pago_id,
       tarjeta_id: initialData?.tarjeta_id || null,
+      cuenta_bancaria_id: initialData?.cuenta_bancaria_id || null,
       frecuencia_gasto_id: initialData?.frecuencia_gasto_id,
       moneda_origen: (initialData?.moneda_origen as Moneda) || 'ARS',
     },
   })
 
   const tarjetas = tarjetasResponse?.data || []
+  const cuentasBancarias = cuentasBancariasResponse?.data || []
   const frecuencias = frecuenciasResponse?.data || []
   const tipoCambio = tipoCambioResponse?.data
 
   const montoActual = form.watch('monto')
   const monedaActual = form.watch('moneda_origen')
   const tarjetaIdActual = form.watch('tarjeta_id')
+  const cuentaBancariaIdActual = form.watch('cuenta_bancaria_id')
   const usaVencimientoTarjeta = form.watch('usa_vencimiento_tarjeta')
 
-  // Find selected card details
+  // Find selected card and bank account details
   const tarjetaSeleccionada = tarjetas.find(t => t.id === tarjetaIdActual)
+  const cuentaBancariaSeleccionada = cuentasBancarias.find(c => c.id === cuentaBancariaIdActual)
   const esTarjetaCredito = tarjetaSeleccionada?.tipo === 'credito'
+
+  // Clear cuenta_bancaria_id when tarjeta is selected and vice versa
+  useEffect(() => {
+    if (tarjetaIdActual && cuentaBancariaIdActual) {
+      form.setValue('cuenta_bancaria_id', null)
+    }
+  }, [tarjetaIdActual, form, cuentaBancariaIdActual])
+
+  useEffect(() => {
+    if (cuentaBancariaIdActual && tarjetaIdActual) {
+      form.setValue('tarjeta_id', null)
+      form.setValue('usa_vencimiento_tarjeta', false)
+    }
+  }, [cuentaBancariaIdActual, form, tarjetaIdActual])
 
   // Auto-enable usa_vencimiento_tarjeta when selecting a credit card
   useEffect(() => {
@@ -136,6 +164,45 @@ export function DebitoAutomaticoForm({
           control={form.control}
           name="tarjeta_id"
           tarjetas={tarjetas}
+          disabled={!!cuentaBancariaIdActual}
+        />
+
+        {/* Bank Account Field */}
+        <FormField
+          control={form.control}
+          name="cuenta_bancaria_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Cuenta Bancaria (opcional)
+              </FormLabel>
+              <Select
+                onValueChange={(value) => field.onChange(value === 'none' ? null : Number(value))}
+                value={field.value?.toString() || 'none'}
+                disabled={!!tarjetaIdActual}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar cuenta bancaria" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="none">Sin cuenta bancaria</SelectItem>
+                  {cuentasBancarias.map((cuenta) => (
+                    <SelectItem key={cuenta.id} value={cuenta.id.toString()}>
+                      {cuenta.nombre} - {cuenta.banco}
+                      {cuenta.ultimos_4_digitos && ` (****${cuenta.ultimos_4_digitos})`}
+                      {' '}[{cuenta.moneda}]
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                La cuenta bancaria desde donde se debita el gasto
+              </FormDescription>
+            </FormItem>
+          )}
         />
 
         {/* Show usa_vencimiento_tarjeta option only for credit cards */}
@@ -163,27 +230,35 @@ export function DebitoAutomaticoForm({
         )}
 
         {/* Info alert about when the debit impacts */}
-        {tarjetaIdActual && (
+        {(tarjetaIdActual || cuentaBancariaIdActual) && (
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              {esTarjetaCredito ? (
-                usaVencimientoTarjeta ? (
-                  <>
-                    <strong>Tarjeta de credito:</strong> El cargo se cobrara el dia{' '}
-                    <strong>{tarjetaSeleccionada?.dia_mes_vencimiento}</strong> de cada mes
-                    (fecha de vencimiento de la tarjeta).
-                  </>
+              {tarjetaIdActual ? (
+                esTarjetaCredito ? (
+                  usaVencimientoTarjeta ? (
+                    <>
+                      <strong>Tarjeta de credito:</strong> El cargo se cobrara el dia{' '}
+                      <strong>{tarjetaSeleccionada?.dia_mes_vencimiento}</strong> de cada mes
+                      (fecha de vencimiento de la tarjeta).
+                    </>
+                  ) : (
+                    <>
+                      <strong>Tarjeta de credito:</strong> El cargo se registra el dia indicado,
+                      pero el pago real sale de tu bolsillo el dia{' '}
+                      <strong>{tarjetaSeleccionada?.dia_mes_vencimiento}</strong> (vencimiento de la tarjeta).
+                    </>
+                  )
                 ) : (
                   <>
-                    <strong>Tarjeta de credito:</strong> El cargo se registra el dia indicado,
-                    pero el pago real sale de tu bolsillo el dia{' '}
-                    <strong>{tarjetaSeleccionada?.dia_mes_vencimiento}</strong> (vencimiento de la tarjeta).
+                    <strong>Tarjeta de debito:</strong> El cargo se debita directamente de tu cuenta
+                    el dia indicado.
                   </>
                 )
               ) : (
                 <>
-                  <strong>Tarjeta de debito:</strong> El cargo se debita directamente de tu cuenta
+                  <strong>Cuenta bancaria:</strong> El cargo se debita de{' '}
+                  <strong>{cuentaBancariaSeleccionada?.nombre}</strong> ({cuentaBancariaSeleccionada?.banco})
                   el dia indicado.
                 </>
               )}

@@ -293,6 +293,7 @@ interface TarjetaFieldProps<T extends FieldValues> {
   label?: string
   description?: string
   filterCuotas?: boolean
+  disabled?: boolean
 }
 
 export function TarjetaField<T extends FieldValues>({
@@ -302,6 +303,7 @@ export function TarjetaField<T extends FieldValues>({
   label = 'Tarjeta (Opcional)',
   description,
   filterCuotas = false,
+  disabled = false,
 }: TarjetaFieldProps<T>) {
   const filteredTarjetas = filterCuotas
     ? tarjetas.filter((t) => t.permite_cuotas)
@@ -319,6 +321,7 @@ export function TarjetaField<T extends FieldValues>({
               field.onChange(value === 'null' ? null : parseInt(value))
             }
             value={field.value?.toString() || 'null'}
+            disabled={disabled}
           >
             <FormControl>
               <SelectTrigger>

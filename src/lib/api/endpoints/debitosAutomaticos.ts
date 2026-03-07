@@ -3,7 +3,7 @@ import { apiClient } from '../client'
 import type { StandardResponse, DebitoAutomatico } from '@/types'
 
 export const debitosAutomaticosApi = {
-  getDebitosAutomaticos: async (params?: { tarjeta_id?: number }) => {
+  getDebitosAutomaticos: async (params?: { tarjeta_id?: number; cuenta_bancaria_id?: number }) => {
     const { data } = await apiClient.get<StandardResponse<DebitoAutomatico[]>>('/debitos-automaticos', { params })
     return data
   },
@@ -54,6 +54,7 @@ export const debitosAutomaticosApi = {
       importancia_gasto_id: debito.importancia_gasto_id,
       tipo_pago_id: debito.tipo_pago_id,
       tarjeta_id: debito.tarjeta_id,
+      cuenta_bancaria_id: debito.cuenta_bancaria_id,
       frecuencia_gasto_id: debito.frecuencia_gasto_id,
       activo: !debito.activo, // Toggle del estado
     }

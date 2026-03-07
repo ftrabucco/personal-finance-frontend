@@ -2,6 +2,8 @@
 
 import { useMemo } from 'react'
 import { useAuth } from '@/lib/auth/authContext'
+import { useModulosContext } from '@/lib/context/ModulosContext'
+import { ModulosDiscoveryBanner } from '@/components/ModulosDiscoveryBanner'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -59,6 +61,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d'
 export default function DashboardPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const { isModuloActivo } = useModulosContext()
 
   const { data: tarjetasResponse } = useTarjetas()
   const { data: gastosResponse } = useAllGastos()
@@ -409,8 +412,12 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* Stats Cards */}
+      {/* Discovery Banner - shows once to new users */}
+      <ModulosDiscoveryBanner />
+
+      {/* Stats Cards - Core: Gastos del Mes (always visible) */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6 md:gap-4">
+        {/* Gastos del Mes - Always visible (core) */}
         <Card className="overflow-hidden border-l-4 border-l-red-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="space-y-1">
@@ -448,6 +455,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Tarjetas - Only if tarjetas module is active */}
+        {isModuloActivo('tarjetas') && (
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tarjetas</CardTitle>
@@ -461,7 +470,10 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
+        )}
 
+        {/* Compras en Cuotas - Only if compras module is active */}
+        {isModuloActivo('compras') && (
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -476,7 +488,10 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
+        )}
 
+        {/* Gastos Recurrentes - Only if gastos_recurrentes module is active */}
+        {isModuloActivo('gastos_recurrentes') && (
         <Card className={`overflow-hidden border-l-4 ${recurrentesStatus.todosProcesados ? 'border-l-red-500' : 'border-l-blue-500'}`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="space-y-1">
@@ -513,7 +528,10 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
+        )}
 
+        {/* Débitos Automáticos - Only if debitos_automaticos module is active */}
+        {isModuloActivo('debitos_automaticos') && (
         <Card className={`overflow-hidden border-l-4 ${debitosStatus.todosProcesados ? 'border-l-red-500' : 'border-l-blue-500'}`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="space-y-1">
@@ -550,7 +568,9 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
+        )}
 
+        {/* Gastos Únicos - Always visible (core) */}
         <Card className="overflow-hidden border-l-4 border-l-red-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="space-y-1">
@@ -579,7 +599,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Income & Balance Cards */}
+      {/* Income & Balance Cards - Always visible (core) */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -598,7 +618,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {ingresosRecurrentes.filter(i => i.activo).length} fijos + {ingresosUnicosDelMes.length} únicos
+              {isModuloActivo('ingresos_recurrentes') ? `${ingresosRecurrentes.filter(i => i.activo).length} fijos + ` : ''}{ingresosUnicosDelMes.length} únicos
             </p>
           </CardContent>
         </Card>
@@ -652,9 +672,11 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Quick Insights - Salud Financiera y Proyecciones */}
+      {/* Quick Insights - Salud Financiera y Proyecciones (only if modules active) */}
+      {(isModuloActivo('salud_financiera') || isModuloActivo('proyecciones')) && (
       <div className="grid gap-3 md:gap-4 md:grid-cols-2">
         {/* Salud Financiera Widget */}
+        {isModuloActivo('salud_financiera') && (
         <Card
           className="cursor-pointer hover:bg-accent/50 transition-colors"
           onClick={() => router.push('/salud-financiera')}
@@ -719,8 +741,10 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
         {/* Proyección Widget */}
+        {isModuloActivo('proyecciones') && (
         <Card
           className="cursor-pointer hover:bg-accent/50 transition-colors"
           onClick={() => router.push('/proyecciones')}
@@ -745,7 +769,9 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
+      )}
 
       {/* Charts Row */}
       <div className="grid gap-3 md:gap-4 md:grid-cols-2">
@@ -876,7 +902,8 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Quick Actions - Hidden on mobile (using BottomNav instead) */}
+      {/* Quick Actions - Hidden on mobile (using BottomNav instead), only if any action modules are active */}
+      {(isModuloActivo('compras') || isModuloActivo('tarjetas')) && (
       <Card className="hidden md:block">
         <CardHeader>
           <CardTitle>Acciones Rápidas</CardTitle>
@@ -898,6 +925,7 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
+            {isModuloActivo('compras') && (
             <Link href="/compras">
               <Card className="cursor-pointer hover:bg-accent transition-colors">
                 <CardHeader>
@@ -911,7 +939,9 @@ export default function DashboardPage() {
                 </CardHeader>
               </Card>
             </Link>
+            )}
 
+            {isModuloActivo('tarjetas') && (
             <Link href="/tarjetas">
               <Card className="cursor-pointer hover:bg-accent transition-colors">
                 <CardHeader>
@@ -923,12 +953,14 @@ export default function DashboardPage() {
                 </CardHeader>
               </Card>
             </Link>
+            )}
           </div>
         </CardContent>
       </Card>
+      )}
 
-      {/* Recent Activity */}
-      <div className="grid gap-3 md:gap-4 md:grid-cols-2">
+      {/* Recent Activity - Always show Gastos Recientes (core), Tarjetas only if module active */}
+      <div className={`grid gap-3 md:gap-4 ${isModuloActivo('tarjetas') ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Gastos Recientes</CardTitle>
@@ -962,6 +994,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
+        {isModuloActivo('tarjetas') && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Mis Tarjetas</CardTitle>
@@ -1002,6 +1035,7 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   )

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Home, Receipt, Plus, BarChart3, User, TrendingDown, TrendingUp } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { CreditCard, ShoppingCart, Repeat, Wallet, Banknote, CalendarDays } from 'lucide-react'
+import { useModulosContext } from '@/lib/context/ModulosContext'
 
 const navItems = [
   { name: 'Inicio', href: '/', icon: Home },
@@ -23,26 +24,44 @@ const navItems = [
 ]
 
 const gastoOptions = [
-  { name: 'Gasto Único', href: '/gastos-unicos?new=true', icon: Wallet, description: 'Un gasto puntual' },
-  { name: 'Compra en Cuotas', href: '/compras?new=true', icon: ShoppingCart, description: 'Pago en cuotas' },
-  { name: 'Gasto Recurrente', href: '/gastos-recurrentes?new=true', icon: Repeat, description: 'Se repite cada mes' },
-  { name: 'Débito Automático', href: '/debitos-automaticos?new=true', icon: CreditCard, description: 'Débito de cuenta' },
+  { name: 'Gasto Único', href: '/gastos-unicos?new=true', basePath: '/gastos-unicos', icon: Wallet, description: 'Un gasto puntual' },
+  { name: 'Compra en Cuotas', href: '/compras?new=true', basePath: '/compras', icon: ShoppingCart, description: 'Pago en cuotas' },
+  { name: 'Gasto Recurrente', href: '/gastos-recurrentes?new=true', basePath: '/gastos-recurrentes', icon: Repeat, description: 'Se repite cada mes' },
+  { name: 'Débito Automático', href: '/debitos-automaticos?new=true', basePath: '/debitos-automaticos', icon: CreditCard, description: 'Débito de cuenta' },
 ]
 
 const ingresoOptions = [
-  { name: 'Ingreso Único', href: '/ingresos-unicos?new=true', icon: Banknote, description: 'Un ingreso puntual' },
-  { name: 'Ingreso Recurrente', href: '/ingresos-recurrentes?new=true', icon: CalendarDays, description: 'Sueldo, renta, etc.' },
+  { name: 'Ingreso Único', href: '/ingresos-unicos?new=true', basePath: '/ingresos-unicos', icon: Banknote, description: 'Un ingreso puntual' },
+  { name: 'Ingreso Recurrente', href: '/ingresos-recurrentes?new=true', basePath: '/ingresos-recurrentes', icon: CalendarDays, description: 'Sueldo, renta, etc.' },
 ]
 
 export function BottomNav() {
   const pathname = usePathname()
   const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const { isRutaVisible } = useModulosContext()
+
+  // Filter nav items based on module visibility
+  const filteredNavItems = useMemo(() => {
+    return navItems.filter(item => {
+      if (item.isAction) return true // Always show the + button
+      return isRutaVisible(item.href)
+    })
+  }, [isRutaVisible])
+
+  // Filter quick add options based on module visibility
+  const filteredGastoOptions = useMemo(() => {
+    return gastoOptions.filter(option => isRutaVisible(option.basePath))
+  }, [isRutaVisible])
+
+  const filteredIngresoOptions = useMemo(() => {
+    return ingresoOptions.filter(option => isRutaVisible(option.basePath))
+  }, [isRutaVisible])
 
   return (
     <>
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background md:hidden">
         <div className="flex h-16 items-center justify-around px-2">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
 
@@ -87,13 +106,14 @@ export function BottomNav() {
           </DialogHeader>
 
           {/* Gastos Section */}
+          {filteredGastoOptions.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <TrendingDown className="h-4 w-4 text-destructive" />
               <span>Gastos</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {gastoOptions.map((option) => {
+              {filteredGastoOptions.map((option) => {
                 const Icon = option.icon
                 return (
                   <Link
@@ -116,18 +136,22 @@ export function BottomNav() {
               })}
             </div>
           </div>
+          )}
 
           {/* Divider */}
-          <div className="border-t my-2" />
+          {filteredGastoOptions.length > 0 && filteredIngresoOptions.length > 0 && (
+            <div className="border-t my-2" />
+          )}
 
           {/* Ingresos Section */}
+          {filteredIngresoOptions.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <TrendingUp className="h-4 w-4 text-green-600" />
               <span>Ingresos</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {ingresoOptions.map((option) => {
+              {filteredIngresoOptions.map((option) => {
                 const Icon = option.icon
                 return (
                   <Link
@@ -150,6 +174,7 @@ export function BottomNav() {
               })}
             </div>
           </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

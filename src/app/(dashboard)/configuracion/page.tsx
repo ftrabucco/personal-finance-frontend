@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Tag, Wallet, Lock, Eye, EyeOff } from 'lucide-react'
+import { Plus, Pencil, Trash2, Tag, Wallet, Lock, Eye, EyeOff, LayoutGrid } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -22,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import {
@@ -38,6 +39,7 @@ import {
   useDeleteFuenteIngreso,
   useToggleFuenteIngresoActivo,
 } from '@/lib/hooks/useFuentesIngresoEditables'
+import { useModulosDisponibles, useToggleModulo, usePreferencias } from '@/lib/hooks/usePreferencias'
 import type { Categoria, FuenteIngreso } from '@/types'
 
 // Common emoji options for categories
@@ -54,7 +56,7 @@ interface FuenteFormData {
 }
 
 export default function ConfiguracionPage() {
-  const [activeTab, setActiveTab] = useState('categorias')
+  const [activeTab, setActiveTab] = useState('modulos')
   const [showInactive, setShowInactive] = useState(false)
 
   // Categorias state
@@ -82,6 +84,11 @@ export default function ConfiguracionPage() {
   const updateFuenteMutation = useUpdateFuenteIngreso()
   const deleteFuenteMutation = useDeleteFuenteIngreso()
   const toggleFuenteMutation = useToggleFuenteIngresoActivo()
+
+  // Modulos
+  const { data: modulosDisponibles, isLoading: loadingModulos } = useModulosDisponibles()
+  const { data: preferencias } = usePreferencias()
+  const toggleModuloMutation = useToggleModulo()
 
   // Categorias handlers
   const handleCreateCategoria = () => {
@@ -237,6 +244,24 @@ export default function ConfiguracionPage() {
     }
   }
 
+  // Modulos handler
+  const handleToggleModulo = async (modulo: string, activo: boolean) => {
+    try {
+      await toggleModuloMutation.mutateAsync({ modulo, activo })
+      toast.success(activo ? 'Modulo activado' : 'Modulo desactivado')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error al cambiar modulo'
+      toast.error(errorMessage)
+    }
+  }
+
+  // Check if a module is active
+  const isModuloActivo = (modulo: string): boolean => {
+    if (!modulosDisponibles || !preferencias) return true
+    if (modulosDisponibles[modulo]?.core) return true
+    return preferencias.modulos_activos.includes(modulo)
+  }
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -257,16 +282,105 @@ export default function ConfiguracionPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="modulos" className="flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            Modulos
+          </TabsTrigger>
           <TabsTrigger value="categorias" className="flex items-center gap-2">
             <Tag className="h-4 w-4" />
             Categorias
           </TabsTrigger>
           <TabsTrigger value="fuentes" className="flex items-center gap-2">
             <Wallet className="h-4 w-4" />
-            Fuentes de Ingreso
+            Fuentes
           </TabsTrigger>
         </TabsList>
+
+        {/* Modulos Tab */}
+        <TabsContent value="modulos" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LayoutGrid className="h-5 w-5" />
+                Modulos de la Aplicacion
+              </CardTitle>
+              <CardDescription>
+                Activa o desactiva funciones para simplificar tu experiencia. Los modulos core siempre estan visibles.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingModulos ? (
+                <div className="text-center py-8">Cargando...</div>
+              ) : modulosDisponibles ? (
+                <div className="space-y-6">
+                  {/* Core Modules */}
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3">Modulos Principales (siempre activos)</h3>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {Object.entries(modulosDisponibles)
+                        .filter(([, config]) => config.core)
+                        .map(([key, config]) => (
+                          <div
+                            key={key}
+                            className="flex items-center justify-between rounded-lg border p-4 bg-muted/30"
+                          >
+                            <div className="space-y-1">
+                              <div className="font-medium">{config.nombre}</div>
+                              <div className="text-sm text-muted-foreground">{config.descripcion}</div>
+                            </div>
+                            <Badge variant="secondary">
+                              <Lock className="mr-1 h-3 w-3" />
+                              Core
+                            </Badge>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Optional Modules */}
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-3">Modulos Opcionales</h3>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {Object.entries(modulosDisponibles)
+                        .filter(([, config]) => !config.core)
+                        .map(([key, config]) => {
+                          const activo = isModuloActivo(key)
+                          return (
+                            <div
+                              key={key}
+                              className={`flex items-center justify-between rounded-lg border p-4 transition-colors ${activo ? 'bg-background' : 'bg-muted/30 opacity-60'}`}
+                            >
+                              <div className="space-y-1 flex-1 mr-4">
+                                <div className="font-medium">{config.nombre}</div>
+                                <div className="text-sm text-muted-foreground">{config.descripcion}</div>
+                              </div>
+                              <Switch
+                                checked={activo}
+                                onCheckedChange={(checked) => handleToggleModulo(key, checked)}
+                                disabled={toggleModuloMutation.isPending}
+                              />
+                            </div>
+                          )
+                        })}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      <strong>Tip:</strong> Empieza con pocos modulos activos y ve habilitando mas a medida que los necesites.
+                      Esto mantendra la aplicacion simple y facil de usar.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No se pudieron cargar los modulos
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Categorias Tab */}
         <TabsContent value="categorias" className="mt-4">
@@ -316,11 +430,11 @@ export default function ConfiguracionPage() {
                           </div>
                         </div>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => handleToggleCategoria(cat)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
-                            {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
                           {!cat.es_sistema && (
                             <>
+                              <Button variant="ghost" size="icon" onClick={() => handleToggleCategoria(cat)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
+                                {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </Button>
                               <Button variant="ghost" size="icon" onClick={() => handleEditCategoria(cat)} title="Editar">
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -370,11 +484,11 @@ export default function ConfiguracionPage() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => handleToggleCategoria(cat)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
-                                  {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </Button>
                                 {!cat.es_sistema && (
                                   <>
+                                    <Button variant="ghost" size="sm" onClick={() => handleToggleCategoria(cat)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
+                                      {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
                                     <Button variant="ghost" size="sm" onClick={() => handleEditCategoria(cat)} title="Editar">
                                       <Pencil className="h-4 w-4" />
                                     </Button>
@@ -444,11 +558,11 @@ export default function ConfiguracionPage() {
                           </div>
                         </div>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => handleToggleFuente(fuente)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
-                            {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
                           {!fuente.es_sistema && (
                             <>
+                              <Button variant="ghost" size="icon" onClick={() => handleToggleFuente(fuente)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
+                                {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </Button>
                               <Button variant="ghost" size="icon" onClick={() => handleEditFuente(fuente)} title="Editar">
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -498,11 +612,11 @@ export default function ConfiguracionPage() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                <Button variant="ghost" size="sm" onClick={() => handleToggleFuente(fuente)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
-                                  {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </Button>
                                 {!fuente.es_sistema && (
                                   <>
+                                    <Button variant="ghost" size="sm" onClick={() => handleToggleFuente(fuente)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
+                                      {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
                                     <Button variant="ghost" size="sm" onClick={() => handleEditFuente(fuente)} title="Editar">
                                       <Pencil className="h-4 w-4" />
                                     </Button>
