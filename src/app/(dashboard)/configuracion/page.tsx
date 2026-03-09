@@ -57,7 +57,7 @@ interface FuenteFormData {
 
 export default function ConfiguracionPage() {
   const [activeTab, setActiveTab] = useState('modulos')
-  const [showInactive, setShowInactive] = useState(false)
+  const [showInactive, setShowInactive] = useState(true)
 
   // Categorias state
   const [isCategoriaDialogOpen, setIsCategoriaDialogOpen] = useState(false)
@@ -69,9 +69,13 @@ export default function ConfiguracionPage() {
   const [editingFuente, setEditingFuente] = useState<FuenteIngreso | null>(null)
   const [fuenteForm, setFuenteForm] = useState<FuenteFormData>({ nombre: '', icono: '' })
 
-  // Queries
-  const { data: categorias = [], isLoading: loadingCategorias } = useCategoriasEditables(showInactive)
-  const { data: fuentes = [], isLoading: loadingFuentes } = useFuentesIngresoEditables(showInactive)
+  // Queries - always fetch all items (includeInactive=true) so we can show/hide them in UI
+  const { data: allCategorias = [], isLoading: loadingCategorias } = useCategoriasEditables(true)
+  const { data: allFuentes = [], isLoading: loadingFuentes } = useFuentesIngresoEditables(true)
+
+  // Filter based on showInactive toggle (visual filter only)
+  const categorias = showInactive ? allCategorias : allCategorias.filter(cat => cat.visible ?? cat.activo)
+  const fuentes = showInactive ? allFuentes : allFuentes.filter(f => f.visible ?? f.activo)
 
   // Mutations - Categorias
   const createCategoriaMutation = useCreateCategoria()
