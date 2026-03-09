@@ -275,14 +275,16 @@ export default function ConfiguracionPage() {
             Personaliza tus categorias de gastos y fuentes de ingreso
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowInactive(!showInactive)}
-        >
-          {showInactive ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-          {showInactive ? 'Ocultar inactivos' : 'Mostrar inactivos'}
-        </Button>
+        {(activeTab === 'categorias' || activeTab === 'fuentes') && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowInactive(!showInactive)}
+          >
+            {showInactive ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+            {showInactive ? 'Ocultar inactivos' : 'Mostrar inactivos'}
+          </Button>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
