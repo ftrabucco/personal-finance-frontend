@@ -57,7 +57,7 @@ interface FuenteFormData {
 
 export default function ConfiguracionPage() {
   const [activeTab, setActiveTab] = useState('modulos')
-  const [showInactive, setShowInactive] = useState(false)
+  const [showInactive, setShowInactive] = useState(true)
 
   // Categorias state
   const [isCategoriaDialogOpen, setIsCategoriaDialogOpen] = useState(false)
@@ -69,9 +69,13 @@ export default function ConfiguracionPage() {
   const [editingFuente, setEditingFuente] = useState<FuenteIngreso | null>(null)
   const [fuenteForm, setFuenteForm] = useState<FuenteFormData>({ nombre: '', icono: '' })
 
-  // Queries
-  const { data: categorias = [], isLoading: loadingCategorias } = useCategoriasEditables(showInactive)
-  const { data: fuentes = [], isLoading: loadingFuentes } = useFuentesIngresoEditables(showInactive)
+  // Queries - always fetch all items (includeInactive=true) so we can show/hide them in UI
+  const { data: allCategorias = [], isLoading: loadingCategorias } = useCategoriasEditables(true)
+  const { data: allFuentes = [], isLoading: loadingFuentes } = useFuentesIngresoEditables(true)
+
+  // Filter based on showInactive toggle (visual filter only)
+  const categorias = showInactive ? allCategorias : allCategorias.filter(cat => cat.visible ?? cat.activo)
+  const fuentes = showInactive ? allFuentes : allFuentes.filter(f => f.visible ?? f.activo)
 
   // Mutations - Categorias
   const createCategoriaMutation = useCreateCategoria()
@@ -271,14 +275,16 @@ export default function ConfiguracionPage() {
             Personaliza tus categorias de gastos y fuentes de ingreso
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowInactive(!showInactive)}
-        >
-          {showInactive ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-          {showInactive ? 'Ocultar inactivos' : 'Mostrar inactivos'}
-        </Button>
+        {(activeTab === 'categorias' || activeTab === 'fuentes') && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowInactive(!showInactive)}
+          >
+            {showInactive ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+            {showInactive ? 'Ocultar inactivos' : 'Mostrar inactivos'}
+          </Button>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -430,11 +436,11 @@ export default function ConfiguracionPage() {
                           </div>
                         </div>
                         <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleToggleCategoria(cat)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
+                            {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
                           {!cat.es_sistema && (
                             <>
-                              <Button variant="ghost" size="icon" onClick={() => handleToggleCategoria(cat)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
-                                {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                              </Button>
                               <Button variant="ghost" size="icon" onClick={() => handleEditCategoria(cat)} title="Editar">
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -484,11 +490,11 @@ export default function ConfiguracionPage() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => handleToggleCategoria(cat)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
+                                  {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
                                 {!cat.es_sistema && (
                                   <>
-                                    <Button variant="ghost" size="sm" onClick={() => handleToggleCategoria(cat)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
-                                      {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                    </Button>
                                     <Button variant="ghost" size="sm" onClick={() => handleEditCategoria(cat)} title="Editar">
                                       <Pencil className="h-4 w-4" />
                                     </Button>
@@ -558,11 +564,11 @@ export default function ConfiguracionPage() {
                           </div>
                         </div>
                         <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleToggleFuente(fuente)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
+                            {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
                           {!fuente.es_sistema && (
                             <>
-                              <Button variant="ghost" size="icon" onClick={() => handleToggleFuente(fuente)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
-                                {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                              </Button>
                               <Button variant="ghost" size="icon" onClick={() => handleEditFuente(fuente)} title="Editar">
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -612,11 +618,11 @@ export default function ConfiguracionPage() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => handleToggleFuente(fuente)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
+                                  {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </Button>
                                 {!fuente.es_sistema && (
                                   <>
-                                    <Button variant="ghost" size="sm" onClick={() => handleToggleFuente(fuente)} title={isVisible ? 'Ocultar' : 'Mostrar'}>
-                                      {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                    </Button>
                                     <Button variant="ghost" size="sm" onClick={() => handleEditFuente(fuente)} title="Editar">
                                       <Pencil className="h-4 w-4" />
                                     </Button>
