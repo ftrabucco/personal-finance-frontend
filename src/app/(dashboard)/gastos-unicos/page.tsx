@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Wallet, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
-import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -30,7 +29,7 @@ import {
   useUpdateGastoUnico,
   useDeleteGastoUnico,
 } from '@/lib/hooks/useGastosUnicos'
-import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
+import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
 import type { GastoUnico } from '@/types'
 
@@ -232,7 +231,7 @@ function GastosUnicosContent() {
                         {gasto.procesado ? 'Procesado' : 'Pendiente'}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        {format(new Date(gasto.fecha), 'dd/MM/yyyy')}
+                        {formatDate(gasto.fecha)}
                       </span>
                     </div>
                     <p className="font-medium truncate mb-1">{gasto.descripcion}</p>
@@ -291,7 +290,7 @@ function GastosUnicosContent() {
                     {sortedGastos.map((gasto) => (
                       <TableRow key={gasto.id}>
                         <TableCell>
-                          {format(new Date(gasto.fecha), 'dd/MM/yyyy')}
+                          {formatDate(gasto.fecha)}
                         </TableCell>
                         <TableCell className="max-w-[200px] truncate">
                           {gasto.descripcion}

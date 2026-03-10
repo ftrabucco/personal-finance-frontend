@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
+import { formatDateForInput } from '@/lib/utils/formatters'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import {
   Select,
@@ -69,10 +70,10 @@ export function IngresoRecurrenteForm({
       mes_de_pago: initialData?.mes_de_pago || null,
       activo: initialData?.activo ?? true,
       fecha_inicio: initialData?.fecha_inicio
-        ? format(new Date(initialData.fecha_inicio), 'yyyy-MM-dd')
+        ? formatDateForInput(initialData.fecha_inicio)
         : format(new Date(), 'yyyy-MM-dd'),
       fecha_fin: initialData?.fecha_fin
-        ? format(new Date(initialData.fecha_fin), 'yyyy-MM-dd')
+        ? formatDateForInput(initialData.fecha_fin)
         : null,
       fuente_ingreso_id: initialData?.fuente_ingreso_id,
       frecuencia_gasto_id: initialData?.frecuencia_gasto_id,

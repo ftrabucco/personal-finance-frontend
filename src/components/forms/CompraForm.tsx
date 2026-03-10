@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
+import { formatDateForInput } from '@/lib/utils/formatters'
 import { Form } from '@/components/ui/form'
 import {
   DescripcionField,
@@ -60,7 +61,7 @@ export function CompraForm({
       monto_total: Number(initialData?.monto_total) || 0,
       moneda_origen: (initialData?.moneda_origen as Moneda) || 'ARS',
       fecha_compra: initialData?.fecha_compra
-        ? format(new Date(initialData.fecha_compra), 'yyyy-MM-dd')
+        ? formatDateForInput(initialData.fecha_compra)
         : format(new Date(), 'yyyy-MM-dd'),
       cantidad_cuotas: Number(initialData?.cantidad_cuotas) || 1,
       categoria_gasto_id: initialData?.categoria_gasto_id,

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, CreditCard, Power, PowerOff, Play, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
-import { format, isSameMonth } from 'date-fns'
+import { isSameMonth } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -32,7 +32,7 @@ import {
   useToggleDebitoAutomatico,
 } from '@/lib/hooks/useDebitosAutomaticos'
 import { useProcesarDebitoIndividual } from '@/lib/hooks/useProcesamiento'
-import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
+import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import type { DebitoAutomatico } from '@/types'
 
 type SortField = 'descripcion' | 'monto_ars' | 'dia_de_pago' | 'categoria'
@@ -420,10 +420,7 @@ function DebitosAutomaticosContent() {
                         </TableCell>
                         <TableCell>
                           {debito.ultima_fecha_generado
-                            ? format(
-                                new Date(debito.ultima_fecha_generado),
-                                'dd/MM/yyyy'
-                              )
+                            ? formatDate(debito.ultima_fecha_generado)
                             : 'Nunca'}
                         </TableCell>
                         <TableCell>

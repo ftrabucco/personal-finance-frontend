@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useAllGastos, useDeleteGasto, useGenerateGastos } from '@/lib/hooks/useGastos'
 import { useCategorias } from '@/lib/hooks/useCatalogos'
-import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
+import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import type { Gasto } from '@/types'
 
 const ITEMS_PER_PAGE = 20
@@ -402,7 +402,7 @@ export default function GastosPage() {
                         <div className="flex items-center gap-2 mb-1">
                           {getTipoOrigenBadge(gasto.tipo_origen)}
                           <span className="text-xs text-muted-foreground">
-                            {format(new Date(gasto.fecha), 'dd/MM/yyyy')}
+                            {formatDate(gasto.fecha)}
                           </span>
                         </div>
                         <p className="font-medium truncate">{gasto.descripcion}</p>
@@ -461,7 +461,7 @@ export default function GastosPage() {
                     {paginatedGastos.map((gasto) => (
                       <TableRow key={gasto.id}>
                         <TableCell>
-                          {format(new Date(gasto.fecha), 'dd/MM/yyyy')}
+                          {formatDate(gasto.fecha)}
                         </TableCell>
                         <TableCell className="max-w-xs truncate">
                           {gasto.descripcion}

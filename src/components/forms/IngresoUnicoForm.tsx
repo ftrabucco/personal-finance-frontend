@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
+import { formatDateForInput } from '@/lib/utils/formatters'
 import { Form } from '@/components/ui/form'
 import {
   DescripcionField,
@@ -49,7 +50,7 @@ export function IngresoUnicoForm({
       monto: Number(initialData?.monto) || 0,
       moneda_origen: initialData?.moneda_origen || 'ARS',
       fecha: initialData?.fecha
-        ? format(new Date(initialData.fecha), 'yyyy-MM-dd')
+        ? formatDateForInput(initialData.fecha)
         : format(new Date(), 'yyyy-MM-dd'),
       fuente_ingreso_id: initialData?.fuente_ingreso_id,
     },
