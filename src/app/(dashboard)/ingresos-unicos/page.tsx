@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
-import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -29,7 +28,7 @@ import {
   useUpdateIngresoUnico,
   useDeleteIngresoUnico,
 } from '@/lib/hooks/useIngresosUnicos'
-import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
+import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
 import type { IngresoUnico } from '@/types'
 
@@ -231,7 +230,7 @@ function IngresosUnicosContent() {
                         {ingreso.fuenteIngreso?.nombre || 'Sin fuente'}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {format(new Date(ingreso.fecha), 'dd/MM/yyyy')}
+                        {formatDate(ingreso.fecha)}
                       </span>
                     </div>
                     <p className="font-medium truncate mb-1">{ingreso.descripcion}</p>
@@ -285,7 +284,7 @@ function IngresosUnicosContent() {
                     {sortedIngresos.map((ingreso) => (
                       <TableRow key={ingreso.id}>
                         <TableCell>
-                          {format(new Date(ingreso.fecha), 'dd/MM/yyyy')}
+                          {formatDate(ingreso.fecha)}
                         </TableCell>
                         <TableCell className="max-w-[200px] truncate">
                           {ingreso.descripcion}

@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, ShoppingCart, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
-import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -30,7 +29,7 @@ import {
   useUpdateCompra,
   useDeleteCompra,
 } from '@/lib/hooks/useCompras'
-import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
+import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
 import type { Compra } from '@/types'
 
@@ -239,7 +238,7 @@ function ComprasContent() {
                           <Badge variant="success" className="text-xs">Finalizada</Badge>
                         )}
                         <span className="text-xs text-muted-foreground">
-                          {format(new Date(compra.fecha_compra), 'dd/MM/yyyy')}
+                          {formatDate(compra.fecha_compra)}
                         </span>
                       </div>
                       <DualCurrencyDisplay
@@ -305,7 +304,7 @@ function ComprasContent() {
                       return (
                         <TableRow key={compra.id}>
                           <TableCell>
-                            {format(new Date(compra.fecha_compra), 'dd/MM/yyyy')}
+                            {formatDate(compra.fecha_compra)}
                           </TableCell>
                           <TableCell className="max-w-xs truncate">
                             {compra.descripcion}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Repeat, Power, PowerOff, Play, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
-import { format, isSameMonth } from 'date-fns'
+import { isSameMonth } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -32,7 +32,7 @@ import {
   useToggleGastoRecurrente,
 } from '@/lib/hooks/useGastosRecurrentes'
 import { useProcesarGastoRecurrenteIndividual } from '@/lib/hooks/useProcesamiento'
-import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
+import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import type { GastoRecurrente } from '@/types'
 
 type SortField = 'descripcion' | 'monto_ars' | 'dia_de_pago' | 'categoria'
@@ -403,10 +403,7 @@ function GastosRecurrentesContent() {
                         </TableCell>
                         <TableCell>
                           {gasto.ultima_fecha_generado
-                            ? format(
-                                new Date(gasto.ultima_fecha_generado),
-                                'dd/MM/yyyy'
-                              )
+                            ? formatDate(gasto.ultima_fecha_generado)
                             : 'Nunca'}
                         </TableCell>
                         <TableCell>

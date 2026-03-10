@@ -41,7 +41,7 @@ import { useTipoCambioActual, useActualizarTipoCambio } from '@/lib/hooks/useTip
 import { useSaludFinanciera, useProyeccion } from '@/lib/hooks/useAnalisis'
 import { useIngresosUnicos } from '@/lib/hooks/useIngresosUnicos'
 import { useIngresosRecurrentes } from '@/lib/hooks/useIngresosRecurrentes'
-import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
+import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 import {
@@ -977,7 +977,7 @@ export default function DashboardPage() {
                       {gasto.descripcion}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(gasto.fecha), 'dd/MM/yyyy')}
+                      {formatDate(gasto.fecha)}
                     </p>
                   </div>
                   <div className="text-sm font-semibold">

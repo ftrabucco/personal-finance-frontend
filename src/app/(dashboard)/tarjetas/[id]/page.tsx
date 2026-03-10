@@ -23,9 +23,7 @@ import {
   DollarSign,
 } from 'lucide-react'
 import { useTarjetaDetalle } from '@/lib/hooks/useTarjetaDetalle'
-import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -234,7 +232,7 @@ export default function TarjetaDetallePage({ params }: PageProps) {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{compra.descripcion}</p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{format(new Date(compra.fecha_compra), 'dd/MM/yyyy')}</span>
+                        <span>{formatDate(compra.fecha_compra)}</span>
                         <span>•</span>
                         <span>{cuotas} cuotas</span>
                       </div>
@@ -387,7 +385,7 @@ export default function TarjetaDetallePage({ params }: PageProps) {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{gasto.descripcion}</p>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(gasto.fecha), 'dd/MM/yyyy', { locale: es })}
+                      {formatDate(gasto.fecha)}
                       {gasto.categoria && ` • ${gasto.categoria.nombre_categoria}`}
                     </p>
                   </div>
