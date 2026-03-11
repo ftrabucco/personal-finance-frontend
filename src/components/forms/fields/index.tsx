@@ -11,13 +11,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import { CurrencySelector } from '@/components/forms/CurrencySelector'
 import { formatCurrency } from '@/lib/utils/formatters'
 import type { Categoria, Importancia, TipoPago, Tarjeta, Frecuencia, Moneda, FuenteIngreso } from '@/types'
@@ -169,23 +163,18 @@ export function CategoriaField<T extends FieldValues>({
       render={({ field }) => (
         <FormItem>
           <FormLabel>Categoría</FormLabel>
-          <Select
-            onValueChange={(value) => field.onChange(parseInt(value))}
-            value={field.value?.toString()}
-          >
-            <FormControl>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar categoría" />
-              </SelectTrigger>
-            </FormControl>
-            <SelectContent>
-              {categorias.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id.toString()}>
-                  {cat.nombre_categoria}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FormControl>
+            <SearchableSelect
+              options={categorias.map((cat) => ({
+                value: cat.id.toString(),
+                label: cat.nombre_categoria,
+              }))}
+              value={field.value?.toString()}
+              onValueChange={(value) => field.onChange(parseInt(value))}
+              placeholder="Seleccionar categoría"
+              searchPlaceholder="Buscar categoría..."
+            />
+          </FormControl>
           <FormMessage />
         </FormItem>
       )}
@@ -214,23 +203,18 @@ export function ImportanciaField<T extends FieldValues>({
       render={({ field }) => (
         <FormItem>
           <FormLabel>Importancia</FormLabel>
-          <Select
-            onValueChange={(value) => field.onChange(parseInt(value))}
-            value={field.value?.toString()}
-          >
-            <FormControl>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar importancia" />
-              </SelectTrigger>
-            </FormControl>
-            <SelectContent>
-              {importancias.map((imp) => (
-                <SelectItem key={imp.id} value={imp.id.toString()}>
-                  {imp.nombre_importancia}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FormControl>
+            <SearchableSelect
+              options={importancias.map((imp) => ({
+                value: imp.id.toString(),
+                label: imp.nombre_importancia,
+              }))}
+              value={field.value?.toString()}
+              onValueChange={(value) => field.onChange(parseInt(value))}
+              placeholder="Seleccionar importancia"
+              searchPlaceholder="Buscar importancia..."
+            />
+          </FormControl>
           <FormMessage />
         </FormItem>
       )}
@@ -259,23 +243,18 @@ export function TipoPagoField<T extends FieldValues>({
       render={({ field }) => (
         <FormItem>
           <FormLabel>Tipo de Pago</FormLabel>
-          <Select
-            onValueChange={(value) => field.onChange(parseInt(value))}
-            value={field.value?.toString()}
-          >
-            <FormControl>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar tipo de pago" />
-              </SelectTrigger>
-            </FormControl>
-            <SelectContent>
-              {tiposPago.map((tipo) => (
-                <SelectItem key={tipo.id} value={tipo.id.toString()}>
-                  {tipo.nombre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FormControl>
+            <SearchableSelect
+              options={tiposPago.map((tipo) => ({
+                value: tipo.id.toString(),
+                label: tipo.nombre,
+              }))}
+              value={field.value?.toString()}
+              onValueChange={(value) => field.onChange(parseInt(value))}
+              placeholder="Seleccionar tipo de pago"
+              searchPlaceholder="Buscar tipo de pago..."
+            />
+          </FormControl>
           <FormMessage />
         </FormItem>
       )}
@@ -316,27 +295,24 @@ export function TarjetaField<T extends FieldValues>({
       render={({ field }) => (
         <FormItem>
           <FormLabel>{label}</FormLabel>
-          <Select
-            onValueChange={(value) =>
-              field.onChange(value === 'null' ? null : parseInt(value))
-            }
-            value={field.value?.toString() || 'null'}
-            disabled={disabled}
-          >
-            <FormControl>
-              <SelectTrigger>
-                <SelectValue placeholder="Sin tarjeta" />
-              </SelectTrigger>
-            </FormControl>
-            <SelectContent>
-              <SelectItem value="null">Sin tarjeta</SelectItem>
-              {filteredTarjetas.map((tarjeta) => (
-                <SelectItem key={tarjeta.id} value={tarjeta.id.toString()}>
-                  {tarjeta.nombre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FormControl>
+            <SearchableSelect
+              options={[
+                { value: 'null', label: 'Sin tarjeta' },
+                ...filteredTarjetas.map((tarjeta) => ({
+                  value: tarjeta.id.toString(),
+                  label: tarjeta.nombre,
+                })),
+              ]}
+              value={field.value?.toString() || 'null'}
+              onValueChange={(value) =>
+                field.onChange(value === 'null' ? null : parseInt(value))
+              }
+              placeholder="Sin tarjeta"
+              searchPlaceholder="Buscar tarjeta..."
+              disabled={disabled}
+            />
+          </FormControl>
           {description && <FormDescription>{description}</FormDescription>}
           <FormMessage />
         </FormItem>
@@ -366,23 +342,18 @@ export function FrecuenciaField<T extends FieldValues>({
       render={({ field }) => (
         <FormItem>
           <FormLabel>Frecuencia</FormLabel>
-          <Select
-            onValueChange={(value) => field.onChange(parseInt(value))}
-            value={field.value?.toString()}
-          >
-            <FormControl>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar frecuencia" />
-              </SelectTrigger>
-            </FormControl>
-            <SelectContent>
-              {frecuencias.map((frec) => (
-                <SelectItem key={frec.id} value={frec.id.toString()}>
-                  {frec.nombre_frecuencia}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FormControl>
+            <SearchableSelect
+              options={frecuencias.map((frec) => ({
+                value: frec.id.toString(),
+                label: frec.nombre_frecuencia,
+              }))}
+              value={field.value?.toString()}
+              onValueChange={(value) => field.onChange(parseInt(value))}
+              placeholder="Seleccionar frecuencia"
+              searchPlaceholder="Buscar frecuencia..."
+            />
+          </FormControl>
           <FormMessage />
         </FormItem>
       )}
@@ -579,23 +550,18 @@ export function FuenteIngresoField<T extends FieldValues>({
       render={({ field }) => (
         <FormItem>
           <FormLabel>Fuente de Ingreso</FormLabel>
-          <Select
-            onValueChange={(value) => field.onChange(parseInt(value))}
-            value={field.value?.toString()}
-          >
-            <FormControl>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar fuente" />
-              </SelectTrigger>
-            </FormControl>
-            <SelectContent>
-              {fuentesIngreso.map((fuente) => (
-                <SelectItem key={fuente.id} value={fuente.id.toString()}>
-                  {fuente.nombre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FormControl>
+            <SearchableSelect
+              options={fuentesIngreso.map((fuente) => ({
+                value: fuente.id.toString(),
+                label: fuente.nombre,
+              }))}
+              value={field.value?.toString()}
+              onValueChange={(value) => field.onChange(parseInt(value))}
+              placeholder="Seleccionar fuente"
+              searchPlaceholder="Buscar fuente de ingreso..."
+            />
+          </FormControl>
           <FormMessage />
         </FormItem>
       )}

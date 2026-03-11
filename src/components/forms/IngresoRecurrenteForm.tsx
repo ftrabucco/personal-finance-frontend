@@ -6,13 +6,7 @@ import { z } from 'zod'
 import { format } from 'date-fns'
 import { formatDateForInput } from '@/lib/utils/formatters'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import {
   DescripcionField,
   MontoConMonedaField,
@@ -135,33 +129,31 @@ export function IngresoRecurrenteForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Mes de Cobro (Opcional)</FormLabel>
-              <Select
-                onValueChange={(value) =>
-                  field.onChange(value === 'null' ? null : parseInt(value))
-                }
-                value={field.value?.toString() || 'null'}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos los meses" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="null">Todos los meses</SelectItem>
-                  <SelectItem value="1">Enero</SelectItem>
-                  <SelectItem value="2">Febrero</SelectItem>
-                  <SelectItem value="3">Marzo</SelectItem>
-                  <SelectItem value="4">Abril</SelectItem>
-                  <SelectItem value="5">Mayo</SelectItem>
-                  <SelectItem value="6">Junio</SelectItem>
-                  <SelectItem value="7">Julio</SelectItem>
-                  <SelectItem value="8">Agosto</SelectItem>
-                  <SelectItem value="9">Septiembre</SelectItem>
-                  <SelectItem value="10">Octubre</SelectItem>
-                  <SelectItem value="11">Noviembre</SelectItem>
-                  <SelectItem value="12">Diciembre</SelectItem>
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <SearchableSelect
+                  options={[
+                    { value: 'null', label: 'Todos los meses' },
+                    { value: '1', label: 'Enero' },
+                    { value: '2', label: 'Febrero' },
+                    { value: '3', label: 'Marzo' },
+                    { value: '4', label: 'Abril' },
+                    { value: '5', label: 'Mayo' },
+                    { value: '6', label: 'Junio' },
+                    { value: '7', label: 'Julio' },
+                    { value: '8', label: 'Agosto' },
+                    { value: '9', label: 'Septiembre' },
+                    { value: '10', label: 'Octubre' },
+                    { value: '11', label: 'Noviembre' },
+                    { value: '12', label: 'Diciembre' },
+                  ]}
+                  value={field.value?.toString() || 'null'}
+                  onValueChange={(value) =>
+                    field.onChange(value === 'null' ? null : parseInt(value))
+                  }
+                  placeholder="Todos los meses"
+                  searchPlaceholder="Buscar mes..."
+                />
+              </FormControl>
               <FormDescription>
                 Para ingresos anuales como aguinaldo, especifica el mes
               </FormDescription>
