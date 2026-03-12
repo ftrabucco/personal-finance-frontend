@@ -8,13 +8,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } fr
 import { Switch } from '@/components/ui/switch'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CreditCard, Info, Building2 } from 'lucide-react'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { SearchableSelect } from '@/components/ui/searchable-select'
 import {
   DescripcionField,
   MontoConMonedaField,
@@ -177,27 +171,22 @@ export function DebitoAutomaticoForm({
                 <Building2 className="h-4 w-4" />
                 Cuenta Bancaria (opcional)
               </FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(value === 'none' ? null : Number(value))}
-                value={field.value?.toString() || 'none'}
-                disabled={!!tarjetaIdActual}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar cuenta bancaria" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="none">Sin cuenta bancaria</SelectItem>
-                  {cuentasBancarias.map((cuenta) => (
-                    <SelectItem key={cuenta.id} value={cuenta.id.toString()}>
-                      {cuenta.nombre} - {cuenta.banco}
-                      {cuenta.ultimos_4_digitos && ` (****${cuenta.ultimos_4_digitos})`}
-                      {' '}[{cuenta.moneda}]
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <SearchableSelect
+                  options={[
+                    { value: 'none', label: 'Sin cuenta bancaria' },
+                    ...cuentasBancarias.map((cuenta) => ({
+                      value: cuenta.id.toString(),
+                      label: `${cuenta.nombre} - ${cuenta.banco}${cuenta.ultimos_4_digitos ? ` (****${cuenta.ultimos_4_digitos})` : ''} [${cuenta.moneda}]`,
+                    })),
+                  ]}
+                  value={field.value?.toString() || 'none'}
+                  onValueChange={(value) => field.onChange(value === 'none' ? null : Number(value))}
+                  placeholder="Seleccionar cuenta bancaria"
+                  searchPlaceholder="Buscar cuenta..."
+                  disabled={!!tarjetaIdActual}
+                />
+              </FormControl>
               <FormDescription>
                 La cuenta bancaria desde donde se debita el gasto
               </FormDescription>
