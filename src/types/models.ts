@@ -73,6 +73,7 @@ export interface Compra {
   importancia_gasto_id: number
   tipo_pago_id: number
   tarjeta_id: number | null
+  cuotas_pagadas: number
   createdAt: string
   updatedAt: string
   // Relaciones
