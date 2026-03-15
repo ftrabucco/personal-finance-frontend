@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, ShoppingCart, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, ShoppingCart, ArrowUpDown, ArrowUp, ArrowDown, CalendarClock, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -21,6 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CompraForm } from '@/components/forms/CompraForm'
 import { DualCurrencyDisplay } from '@/components/common/DualCurrencyDisplay'
 import {
@@ -41,6 +43,7 @@ function ComprasContent() {
   const [editingCompra, setEditingCompra] = useState<Compra | null>(null)
   const [sortField, setSortField] = useState<SortField>('fecha_compra')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [statusFilter, setStatusFilter] = useState<'todas' | 'pendientes' | 'finalizadas'>('todas')
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -60,9 +63,13 @@ function ComprasContent() {
 
   const compras = response?.data || []
 
-  // Sorting logic
-  const sortedCompras = useMemo(() => {
-    return [...compras].sort((a, b) => {
+  // Filter + sort logic
+  const filteredCompras = useMemo(() => {
+    let filtered = compras
+    if (statusFilter === 'pendientes') filtered = compras.filter(c => c.pendiente_cuotas)
+    if (statusFilter === 'finalizadas') filtered = compras.filter(c => !c.pendiente_cuotas)
+
+    return [...filtered].sort((a, b) => {
       let comparison = 0
       switch (sortField) {
         case 'fecha_compra':
@@ -83,7 +90,7 @@ function ComprasContent() {
       }
       return sortDirection === 'asc' ? comparison : -comparison
     })
-  }, [compras, sortField, sortDirection])
+  }, [compras, sortField, sortDirection, statusFilter])
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -154,57 +161,110 @@ function ComprasContent() {
     }
   }
 
-  const totalARS = sortedCompras.reduce((sum, compra) => sum + (Number(compra.monto_total_ars) || 0), 0)
-  const totalUSD = sortedCompras.reduce((sum, compra) => sum + (Number(compra.monto_total_usd) || 0), 0)
-  const comprasPendientes = sortedCompras.filter((c) => c.pendiente_cuotas).length
+  const pendientes = compras.filter((c) => c.pendiente_cuotas)
+  const comprasPendientesCount = pendientes.length
+  const comprasFinalizadasCount = compras.length - comprasPendientesCount
+
+  // Cuota mensual este mes = suma de (monto_total_ars / cantidad_cuotas) de cada compra pendiente
+  const cuotaMensualARS = pendientes.reduce((sum, c) =>
+    sum + (Number(c.monto_total_ars) || 0) / (c.cantidad_cuotas || 1), 0)
+  const cuotaMensualUSD = pendientes.reduce((sum, c) =>
+    sum + (Number(c.monto_total_usd) || 0) / (c.cantidad_cuotas || 1), 0)
+
+  // Total pendiente = suma de cuotas restantes * monto por cuota
+  const totalPendienteARS = pendientes.reduce((sum, c) => {
+    const cuotaARS = (Number(c.monto_total_ars) || 0) / (c.cantidad_cuotas || 1)
+    const restantes = c.cantidad_cuotas - (c.cuotas_pagadas || 0)
+    return sum + cuotaARS * restantes
+  }, 0)
+  const totalPendienteUSD = pendientes.reduce((sum, c) => {
+    const cuotaUSD = (Number(c.monto_total_usd) || 0) / (c.cantidad_cuotas || 1)
+    const restantes = c.cantidad_cuotas - (c.cuotas_pagadas || 0)
+    return sum + cuotaUSD * restantes
+  }, 0)
 
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Compras</h1>
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Cuotas</h1>
           <p className="text-sm text-muted-foreground md:text-base">
             Gestiona tus compras en cuotas
           </p>
         </div>
         <Button onClick={handleCreate} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
-          Nueva Compra
+          Nueva Cuota
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Compras</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />
+            <CardTitle className="text-sm font-medium">Cuotas del Mes</CardTitle>
+            <CalendarClock className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <div className="text-lg sm:text-xl md:text-2xl font-bold" title={formatCurrency(totalARS)}>
-                {formatCurrencyCompact(totalARS)}
+              <div className="text-lg sm:text-xl md:text-2xl font-bold" title={formatCurrency(cuotaMensualARS)}>
+                {formatCurrencyCompact(cuotaMensualARS)}
               </div>
-              <div className="text-sm text-muted-foreground" title={`US$ ${totalUSD.toFixed(2)}`}>
-                {formatCurrencyCompact(totalUSD, 'USD')}
-              </div>
+              {cuotaMensualUSD > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {formatCurrencyCompact(cuotaMensualUSD, 'USD')}
+                </div>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Suma de todas las compras
+              Cuotas a pagar este mes
             </p>
           </CardContent>
         </Card>
 
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Compras Pendientes
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Total Pendiente</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-500 shrink-0" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold" title={formatCurrency(totalPendienteARS)}>
+                {formatCurrencyCompact(totalPendienteARS)}
+              </div>
+              {totalPendienteUSD > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {formatCurrencyCompact(totalPendienteUSD, 'USD')}
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Suma de cuotas restantes
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
             <ShoppingCart className="h-4 w-4 text-yellow-500 shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg sm:text-xl md:text-2xl font-bold">{comprasPendientes}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{comprasPendientesCount}</div>
             <p className="text-xs text-muted-foreground">
               Con cuotas por pagar
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Finalizadas</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-green-500 shrink-0" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{comprasFinalizadasCount}</div>
+            <p className="text-xs text-muted-foreground">
+              Completamente pagadas
             </p>
           </CardContent>
         </Card>
@@ -212,23 +272,38 @@ function ComprasContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Listado de Compras
-          </CardTitle>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Compras en Cuotas
+            </CardTitle>
+            <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+              <TabsList>
+                <TabsTrigger value="todas">
+                  Todas <Badge variant="secondary" className="ml-1.5">{compras.length}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="pendientes">
+                  Pendientes <Badge variant="warning" className="ml-1.5">{comprasPendientesCount}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="finalizadas">
+                  Finalizadas <Badge variant="success" className="ml-1.5">{comprasFinalizadasCount}</Badge>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">Cargando compras...</div>
-          ) : sortedCompras.length === 0 ? (
+          ) : filteredCompras.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No hay compras registradas. Crea tu primera compra.
+              No hay compras en cuotas registradas.
             </div>
           ) : (
             <>
               {/* Mobile: Cards */}
               <div className="space-y-3 md:hidden">
-                {sortedCompras.map((compra) => (
+                {filteredCompras.map((compra) => (
                   <div key={compra.id} className="rounded-lg border p-3">
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2">
@@ -250,15 +325,22 @@ function ComprasContent() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-medium truncate">{compra.descripcion}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{compra.cantidad_cuotas} cuotas</span>
-                        {compra.tarjeta?.nombre && (
-                          <>
-                            <span>•</span>
-                            <span className="truncate">{compra.tarjeta.nombre}</span>
-                          </>
-                        )}
-                      </div>
+                      {compra.cantidad_cuotas > 1 ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <Progress
+                            value={(compra.cuotas_pagadas / compra.cantidad_cuotas) * 100}
+                            className={`h-1.5 flex-1 ${!compra.pendiente_cuotas ? '[&>div]:bg-green-500' : '[&>div]:bg-yellow-500'}`}
+                          />
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {compra.cuotas_pagadas}/{compra.cantidad_cuotas}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">1 cuota</span>
+                      )}
+                      {compra.tarjeta?.nombre && (
+                        <span className="text-xs text-muted-foreground truncate">{compra.tarjeta.nombre}</span>
+                      )}
                     </div>
                     <div className="flex justify-end mt-2 pt-2 border-t gap-2">
                       <Button
@@ -300,7 +382,7 @@ function ComprasContent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedCompras.map((compra) => {
+                    {filteredCompras.map((compra) => {
                       return (
                         <TableRow key={compra.id}>
                           <TableCell>
@@ -321,11 +403,19 @@ function ComprasContent() {
                             />
                           </TableCell>
                           <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-medium">
-                                {compra.cantidad_cuotas} cuotas
-                              </span>
-                            </div>
+                            {compra.cantidad_cuotas > 1 ? (
+                              <div className="flex items-center gap-2 min-w-[120px]">
+                                <Progress
+                                  value={(compra.cuotas_pagadas / compra.cantidad_cuotas) * 100}
+                                  className={`h-2 flex-1 ${!compra.pendiente_cuotas ? '[&>div]:bg-green-500' : '[&>div]:bg-yellow-500'}`}
+                                />
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                  {compra.cuotas_pagadas}/{compra.cantidad_cuotas}
+                                </span>
+                              </div>
+                            ) : (
+                              <Badge variant="secondary">1 cuota</Badge>
+                            )}
                           </TableCell>
                           <TableCell>{compra.tarjeta?.nombre || '-'}</TableCell>
                           <TableCell>
@@ -368,12 +458,12 @@ function ComprasContent() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingCompra ? 'Editar Compra' : 'Nueva Compra'}
+              {editingCompra ? 'Editar Cuota' : 'Nueva Cuota'}
             </DialogTitle>
             <DialogDescription>
               {editingCompra
                 ? 'Modifica los datos de la compra en cuotas'
-                : 'Completa el formulario para registrar una nueva compra en cuotas'}
+                : 'Registra una nueva compra en cuotas'}
             </DialogDescription>
           </DialogHeader>
           <CompraForm

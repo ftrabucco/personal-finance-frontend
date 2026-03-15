@@ -931,7 +931,7 @@ export default function DashboardPage() {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Plus className="h-5 w-5" />
-                    Nueva Compra
+                    Nueva Cuota
                   </CardTitle>
                   <CardDescription>
                     Registra una compra en cuotas

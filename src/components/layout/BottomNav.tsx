@@ -25,7 +25,7 @@ const navItems = [
 
 const gastoOptions = [
   { name: 'Gasto Único', href: '/gastos-unicos?new=true', basePath: '/gastos-unicos', icon: Wallet, description: 'Un gasto puntual' },
-  { name: 'Compra en Cuotas', href: '/compras?new=true', basePath: '/compras', icon: ShoppingCart, description: 'Pago en cuotas' },
+  { name: 'Nueva Cuota', href: '/compras?new=true', basePath: '/compras', icon: ShoppingCart, description: 'Compra en cuotas' },
   { name: 'Gasto Recurrente', href: '/gastos-recurrentes?new=true', basePath: '/gastos-recurrentes', icon: Repeat, description: 'Se repite cada mes' },
   { name: 'Débito Automático', href: '/debitos-automaticos?new=true', basePath: '/debitos-automaticos', icon: CreditCard, description: 'Débito de cuenta' },
 ]

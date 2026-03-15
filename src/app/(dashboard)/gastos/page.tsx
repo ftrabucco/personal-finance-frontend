@@ -37,7 +37,7 @@ const TIPO_ORIGEN_OPTIONS = [
   { value: 'unico', label: 'Único' },
   { value: 'recurrente', label: 'Recurrente' },
   { value: 'debito_automatico', label: 'Débito Automático' },
-  { value: 'compra', label: 'Compra' },
+  { value: 'compra', label: 'Cuota' },
 ]
 
 const MONTH_OPTIONS = [
@@ -93,7 +93,7 @@ export default function GastosPage() {
       case 'debito_automatico':
         return <Badge variant="outline">Débito Auto.</Badge>
       case 'compra':
-        return <Badge>Compra</Badge>
+        return <Badge>Cuota</Badge>
       default:
         return <Badge variant="secondary">{tipoOrigen}</Badge>
     }
@@ -291,7 +291,7 @@ export default function GastosPage() {
 
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Compras</CardTitle>
+            <CardTitle className="text-sm font-medium">Cuotas</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-lg sm:text-xl md:text-2xl font-bold">
