@@ -8,18 +8,13 @@ import {
   Home,
   History,
   CreditCard,
-  ShoppingCart,
-  Repeat,
-  PlusCircle,
   TrendingUp,
   Heart,
   User,
   LogOut,
   Moon,
   Sun,
-  Zap,
   Wallet,
-  CalendarDays,
   Settings,
   Building2,
 } from 'lucide-react'
@@ -39,18 +34,13 @@ const navigationSections = [
   {
     title: 'Registro',
     items: [
-      { name: 'Historial', href: '/gastos', icon: History },
-      { name: 'Nuevo Gasto', href: '/gastos-unicos', icon: PlusCircle },
-      { name: 'Cuotas', href: '/compras', icon: ShoppingCart },
-      { name: 'Gastos Recurrentes', href: '/gastos-recurrentes', icon: Repeat },
-      { name: 'Débitos Automáticos', href: '/debitos-automaticos', icon: Zap },
+      { name: 'Gastos', href: '/gastos', icon: History },
     ],
   },
   {
     title: 'Ingresos',
     items: [
-      { name: 'Ingreso Único', href: '/ingresos-unicos', icon: Wallet },
-      { name: 'Ingresos Recurrentes', href: '/ingresos-recurrentes', icon: CalendarDays },
+      { name: 'Ingresos', href: '/ingresos', icon: Wallet },
     ],
   },
   {

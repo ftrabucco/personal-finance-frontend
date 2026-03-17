@@ -10,7 +10,7 @@ export const MODULO_ROUTES: Record<string, string[]> = {
   dashboard: ['/'],
   historial: ['/gastos'],
   gastos_unicos: ['/gastos-unicos'],
-  ingresos_unicos: ['/ingresos-unicos'],
+  ingresos_unicos: ['/ingresos-unicos', '/ingresos'],
   configuracion: ['/configuracion'],
   perfil: ['/perfil'],
   compras: ['/compras'],

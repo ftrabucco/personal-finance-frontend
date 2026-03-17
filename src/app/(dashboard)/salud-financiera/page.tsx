@@ -34,7 +34,9 @@ import {
   Shield,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/navigation'
 import { useSaludFinanciera } from '@/lib/hooks/useAnalisis'
+import { useCategorias, useImportancias } from '@/lib/hooks/useCatalogos'
 import { useIngresosUnicos } from '@/lib/hooks/useIngresosUnicos'
 import { useIngresosRecurrentes } from '@/lib/hooks/useIngresosRecurrentes'
 import { useFrecuencias } from '@/lib/hooks/useCatalogos'
@@ -159,6 +161,7 @@ function calcularIngresosRecurrentesPeriodo(
 }
 
 export default function SaludFinancieraPage() {
+  const router = useRouter()
   const [periodo, setPeriodo] = useState<PeriodoSaludFinanciera>('mes')
 
   const { data: saludResponse, isLoading: isLoadingSalud, refetch, isFetching } = useSaludFinanciera(periodo)
@@ -166,10 +169,15 @@ export default function SaludFinancieraPage() {
   const { data: ingresosRecurrentesResponse } = useIngresosRecurrentes()
   const { data: frecuenciasResponse } = useFrecuencias()
 
+  const { data: categoriasResponse } = useCategorias()
+  const { data: importanciasData } = useImportancias()
+
   const salud = saludResponse?.data
   const ingresosUnicos = ingresosUnicosResponse?.data || []
   const ingresosRecurrentes = ingresosRecurrentesResponse?.data || []
   const frecuencias = frecuenciasResponse?.data || []
+  const allCategorias = categoriasResponse?.data || []
+  const allImportancias = (Array.isArray(importanciasData) ? importanciasData : importanciasData?.data) || []
 
   const isLoading = isLoadingSalud || isLoadingIngresos
 
@@ -577,8 +585,13 @@ export default function SaludFinancieraPage() {
                       .sort((a, b) => b[1].total_ars - a[1].total_ars)
                       .map(([importancia, data]) => {
                         const porcentaje = (data.total_ars / salud.totales.total_ars) * 100
+                        const impObj = allImportancias.find((i: { id: number; nombre_importancia: string }) => i.nombre_importancia === importancia)
                         return (
-                          <div key={importancia}>
+                          <div
+                            key={importancia}
+                            className={impObj ? "cursor-pointer hover:bg-accent/50 rounded-lg p-1 -m-1 transition-colors" : ""}
+                            onClick={() => impObj && router.push(`/gastos?importancia=${impObj.id}`)}
+                          >
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-sm font-medium">{importancia}</span>
                               <span className="text-sm font-semibold">
@@ -615,8 +628,13 @@ export default function SaludFinancieraPage() {
                       .slice(0, 5)
                       .map(([categoria, data], index) => {
                         const porcentaje = (data.total_ars / salud.totales.total_ars) * 100
+                        const catObj = allCategorias.find((c: { id: number; nombre_categoria: string }) => c.nombre_categoria === categoria)
                         return (
-                          <div key={categoria}>
+                          <div
+                            key={categoria}
+                            className={catObj ? "cursor-pointer hover:bg-accent/50 rounded-lg p-1 -m-1 transition-colors" : ""}
+                            onClick={() => catObj && router.push(`/gastos?categoria=${catObj.id}`)}
+                          >
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-sm font-medium">
                                 {index + 1}. {categoria}

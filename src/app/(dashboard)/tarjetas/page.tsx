@@ -28,6 +28,8 @@ import {
   useUpdateTarjeta,
   useDeleteTarjeta,
 } from '@/lib/hooks/useTarjetas'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog'
 import type { Tarjeta } from '@/types'
 
 export default function TarjetasPage() {
@@ -39,6 +41,7 @@ export default function TarjetasPage() {
   const createMutation = useCreateTarjeta()
   const updateMutation = useUpdateTarjeta()
   const deleteMutation = useDeleteTarjeta()
+  const confirmDialog = useConfirmDialog()
 
   const tarjetas = response?.data || []
 
@@ -52,13 +55,17 @@ export default function TarjetasPage() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de eliminar esta tarjeta?')) {
-      try {
-        await deleteMutation.mutateAsync(id)
-      } catch (error) {
-        console.error('Error al eliminar tarjeta:', error)
-      }
+  const handleDeleteClick = (id: number) => {
+    confirmDialog.requestConfirm(id)
+  }
+
+  const handleDeleteConfirm = async () => {
+    const id = confirmDialog.confirm()
+    if (id == null) return
+    try {
+      await deleteMutation.mutateAsync(id)
+    } catch (error) {
+      console.error('Error al eliminar tarjeta:', error)
     }
   }
 
@@ -170,7 +177,7 @@ export default function TarjetasPage() {
                         className="h-9 w-9"
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleDelete(tarjeta.id)
+                          handleDeleteClick(tarjeta.id)
                         }}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -250,7 +257,7 @@ export default function TarjetasPage() {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                handleDelete(tarjeta.id)
+                                handleDeleteClick(tarjeta.id)
                               }}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
@@ -268,7 +275,7 @@ export default function TarjetasPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingTarjeta ? 'Editar Tarjeta' : 'Nueva Tarjeta'}
@@ -290,6 +297,16 @@ export default function TarjetasPage() {
           />
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDialog.isOpen}
+        onOpenChange={confirmDialog.setIsOpen}
+        title="Eliminar tarjeta"
+        description="¿Estás seguro de eliminar esta tarjeta? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        onConfirm={handleDeleteConfirm}
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }

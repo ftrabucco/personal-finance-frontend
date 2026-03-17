@@ -27,6 +27,8 @@ import {
   useUpdateCuentaBancaria,
   useDeleteCuentaBancaria,
 } from '@/lib/hooks/useCuentasBancarias'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog'
 import type { CuentaBancaria } from '@/types'
 
 export default function CuentasBancariasPage() {
@@ -37,6 +39,7 @@ export default function CuentasBancariasPage() {
   const createMutation = useCreateCuentaBancaria()
   const updateMutation = useUpdateCuentaBancaria()
   const deleteMutation = useDeleteCuentaBancaria()
+  const confirmDialog = useConfirmDialog()
 
   const cuentas = response?.data || []
 
@@ -50,17 +53,21 @@ export default function CuentasBancariasPage() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estas seguro de eliminar esta cuenta bancaria?')) {
-      try {
-        await deleteMutation.mutateAsync(id)
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-        if (errorMessage.includes('en uso') || errorMessage.includes('being used')) {
-          alert('No se puede eliminar la cuenta porque esta siendo usada en debitos automaticos')
-        } else {
-          console.error('Error al eliminar cuenta:', error)
-        }
+  const handleDeleteClick = (id: number) => {
+    confirmDialog.requestConfirm(id)
+  }
+
+  const handleDeleteConfirm = async () => {
+    const id = confirmDialog.confirm()
+    if (id == null) return
+    try {
+      await deleteMutation.mutateAsync(id)
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      if (errorMessage.includes('en uso') || errorMessage.includes('being used')) {
+        alert('No se puede eliminar la cuenta porque esta siendo usada en debitos automaticos')
+      } else {
+        console.error('Error al eliminar cuenta:', error)
       }
     }
   }
@@ -239,7 +246,7 @@ export default function CuentasBancariasPage() {
                           variant="ghost"
                           size="icon"
                           className="h-9 w-9"
-                          onClick={() => handleDelete(cuenta.id)}
+                          onClick={() => handleDeleteClick(cuenta.id)}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -309,7 +316,7 @@ export default function CuentasBancariasPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDelete(cuenta.id)}
+                              onClick={() => handleDeleteClick(cuenta.id)}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
@@ -326,7 +333,7 @@ export default function CuentasBancariasPage() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingCuenta ? 'Editar Cuenta Bancaria' : 'Nueva Cuenta Bancaria'}
@@ -348,6 +355,16 @@ export default function CuentasBancariasPage() {
           />
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDialog.isOpen}
+        onOpenChange={confirmDialog.setIsOpen}
+        title="Eliminar cuenta bancaria"
+        description="¿Estás seguro de eliminar esta cuenta bancaria? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        onConfirm={handleDeleteConfirm}
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }
