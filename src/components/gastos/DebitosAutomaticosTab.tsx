@@ -1,0 +1,522 @@
+'use client'
+
+import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Plus, Pencil, Trash2, CreditCard, Power, PowerOff, Play, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { isSameMonth } from 'date-fns'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { DebitoAutomaticoForm } from '@/components/forms/DebitoAutomaticoForm'
+import { DualCurrencyDisplay } from '@/components/common/DualCurrencyDisplay'
+import {
+  useDebitosAutomaticos,
+  useCreateDebitoAutomatico,
+  useUpdateDebitoAutomatico,
+  useDeleteDebitoAutomatico,
+  useToggleDebitoAutomatico,
+} from '@/lib/hooks/useDebitosAutomaticos'
+import { useProcesarDebitoIndividual } from '@/lib/hooks/useProcesamiento'
+import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog'
+import type { DebitoAutomatico } from '@/types'
+
+type SortField = 'descripcion' | 'monto_ars' | 'dia_de_pago' | 'categoria'
+type SortDirection = 'asc' | 'desc'
+
+export function DebitosAutomaticosTab() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingDebito, setEditingDebito] = useState<DebitoAutomatico | null>(null)
+  const [sortField, setSortField] = useState<SortField>('descripcion')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Open dialog if ?new=true is in URL
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setEditingDebito(null)
+      setIsDialogOpen(true)
+      router.replace('/gastos?tab=debitos', { scroll: false })
+    }
+  }, [searchParams, router])
+
+  const { data: response, isLoading } = useDebitosAutomaticos()
+  const createMutation = useCreateDebitoAutomatico()
+  const updateMutation = useUpdateDebitoAutomatico()
+  const deleteMutation = useDeleteDebitoAutomatico()
+  const confirmDialog = useConfirmDialog()
+  const toggleMutation = useToggleDebitoAutomatico()
+  const procesarMutation = useProcesarDebitoIndividual()
+
+  const debitos = response?.data || []
+
+  const getDiaImpacto = (debito: DebitoAutomatico): { dia: number | null; usaTarjeta: boolean } => {
+    if (debito.usa_vencimiento_tarjeta && debito.tarjeta?.tipo === 'credito') {
+      return { dia: debito.tarjeta.dia_mes_vencimiento ?? null, usaTarjeta: true }
+    }
+    return { dia: debito.dia_de_pago, usaTarjeta: false }
+  }
+
+  const formatDiaImpacto = (debito: DebitoAutomatico): string => {
+    const { dia, usaTarjeta } = getDiaImpacto(debito)
+    if (dia === null) return '-'
+    if (usaTarjeta) {
+      return `Dia ${dia} (vto. tarjeta)`
+    }
+    return `Dia ${dia}`
+  }
+
+  const sortedDebitos = useMemo(() => {
+    return [...debitos].sort((a, b) => {
+      let comparison = 0
+      switch (sortField) {
+        case 'descripcion':
+          comparison = a.descripcion.localeCompare(b.descripcion)
+          break
+        case 'monto_ars':
+          comparison = Number(a.monto_ars) - Number(b.monto_ars)
+          break
+        case 'dia_de_pago':
+          const diaA = getDiaImpacto(a).dia ?? 0
+          const diaB = getDiaImpacto(b).dia ?? 0
+          comparison = diaA - diaB
+          break
+        case 'categoria':
+          comparison = (a.categoria?.nombre_categoria || '').localeCompare(b.categoria?.nombre_categoria || '')
+          break
+      }
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [debitos, sortField, sortDirection])
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead
+      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field ? (
+          sortDirection === 'asc' ? (
+            <ArrowUp className="h-4 w-4" />
+          ) : (
+            <ArrowDown className="h-4 w-4" />
+          )
+        ) : (
+          <ArrowUpDown className="h-4 w-4 opacity-30" />
+        )}
+      </div>
+    </TableHead>
+  )
+
+  const handleCreate = () => {
+    setEditingDebito(null)
+    setIsDialogOpen(true)
+  }
+
+  const handleEdit = (debito: DebitoAutomatico) => {
+    setEditingDebito(debito)
+    setIsDialogOpen(true)
+  }
+
+  const handleDeleteClick = (id: number) => {
+    confirmDialog.requestConfirm(id)
+  }
+
+  const handleDeleteConfirm = async () => {
+    const id = confirmDialog.confirm()
+    if (id == null) return
+    try {
+      await deleteMutation.mutateAsync(id)
+    } catch (error) {
+      console.error('Error al eliminar debito:', error)
+    }
+  }
+
+  const handleToggle = async (id: number) => {
+    try {
+      await toggleMutation.mutateAsync(id)
+    } catch (error) {
+      console.error('Error al cambiar estado:', error)
+    }
+  }
+
+  const handleProcesar = async (id: number) => {
+    try {
+      await procesarMutation.mutateAsync(id)
+    } catch (error) {
+      console.error('Error al procesar debito:', error)
+    }
+  }
+
+  const handleSubmit = async (data: Partial<DebitoAutomatico>) => {
+    try {
+      if (editingDebito) {
+        await updateMutation.mutateAsync({
+          id: editingDebito.id,
+          data,
+        })
+      } else {
+        await createMutation.mutateAsync(data)
+      }
+      setIsDialogOpen(false)
+      setEditingDebito(null)
+    } catch (error) {
+      console.error('Error al guardar debito:', error)
+    }
+  }
+
+  const debitosActivos = debitos.filter((d) => d.activo)
+
+  const isProcesadoEsteMes = (ultimaFecha: string | null | undefined): boolean => {
+    if (!ultimaFecha) return false
+    return isSameMonth(new Date(ultimaFecha), new Date())
+  }
+
+  const totalARS = debitosActivos.reduce(
+    (sum, debito) => sum + (Number(debito.monto_ars) || 0),
+    0
+  )
+  const totalUSD = debitosActivos.reduce(
+    (sum, debito) => sum + (Number(debito.monto_usd) || 0),
+    0
+  )
+
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex justify-end">
+        <Button onClick={handleCreate} className="w-full sm:w-auto">
+          <Plus className="mr-2 h-4 w-4" />
+          Nuevo Debito
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Mensual
+            </CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              <div className="text-lg sm:text-xl md:text-2xl font-bold" title={formatCurrency(totalARS)}>
+                {formatCurrencyCompact(totalARS)}
+              </div>
+              <div className="text-sm text-muted-foreground" title={`US$ ${Number(totalUSD).toFixed(2)}`}>
+                {formatCurrencyCompact(totalUSD, 'USD')}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {debitosActivos.length} debitos activos
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Debitos Activos
+            </CardTitle>
+            <Power className="h-4 w-4 text-green-500 shrink-0" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{debitosActivos.length}</div>
+            <p className="text-xs text-muted-foreground">En funcionamiento</p>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Debitos Inactivos
+            </CardTitle>
+            <PowerOff className="h-4 w-4 text-muted-foreground shrink-0" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">
+              {debitos.length - debitosActivos.length}
+            </div>
+            <p className="text-xs text-muted-foreground">Pausados</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Listado de Debitos Automaticos
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center py-8">Cargando debitos...</div>
+          ) : debitos.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No hay debitos automaticos registrados. Crea tu primer debito.
+            </div>
+          ) : (
+            <>
+              {/* Mobile: Cards */}
+              <div className="space-y-3 md:hidden">
+                {sortedDebitos.map((debito) => (
+                  <div key={debito.id} className="rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          {debito.activo ? (
+                            isProcesadoEsteMes(debito.ultima_fecha_generado) ? (
+                              <Badge variant="success" className="text-xs">Pagado</Badge>
+                            ) : (
+                              <Badge variant="warning" className="text-xs">Pendiente</Badge>
+                            )
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">Inactivo</Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {formatDiaImpacto(debito)}
+                          </span>
+                        </div>
+                        <p className="font-medium truncate">{debito.descripcion}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{debito.frecuencia?.nombre_frecuencia || '-'}</span>
+                          {debito.categoria?.nombre_categoria && (
+                            <>
+                              <span>-</span>
+                              <span>{debito.categoria.nombre_categoria}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <DualCurrencyDisplay
+                          montoArs={debito.monto_ars || 0}
+                          montoUsd={debito.monto_usd || 0}
+                          monedaOrigen={debito.moneda_origen || 'ARS'}
+                          tipoCambio={debito.tipo_cambio_referencia}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => handleToggle(debito.id)}
+                        >
+                          {debito.activo ? (
+                            <>
+                              <PowerOff className="h-4 w-4 mr-1 text-yellow-500" />
+                              Pausar
+                            </>
+                          ) : (
+                            <>
+                              <Power className="h-4 w-4 mr-1 text-green-500" />
+                              Activar
+                            </>
+                          )}
+                        </Button>
+                        {debito.activo && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => handleProcesar(debito.id)}
+                            disabled={procesarMutation.isPending}
+                          >
+                            <Play className="h-4 w-4 mr-1 text-blue-500" />
+                            Procesar
+                          </Button>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8"
+                          onClick={() => handleEdit(debito)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteClick(debito.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <SortableHeader field="descripcion">Descripcion</SortableHeader>
+                      <SortableHeader field="monto_ars">Monto</SortableHeader>
+                      <SortableHeader field="dia_de_pago">Dia de Debito</SortableHeader>
+                      <TableHead>Frecuencia</TableHead>
+                      <SortableHeader field="categoria">Categoria</SortableHeader>
+                      <TableHead>Ultima Generacion</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedDebitos.map((debito) => (
+                      <TableRow key={debito.id}>
+                        <TableCell className="max-w-xs truncate font-medium">
+                          {debito.descripcion}
+                        </TableCell>
+                        <TableCell>
+                          <DualCurrencyDisplay
+                            montoArs={debito.monto_ars || 0}
+                            montoUsd={debito.monto_usd || 0}
+                            monedaOrigen={debito.moneda_origen || 'ARS'}
+                            tipoCambio={debito.tipo_cambio_referencia}
+                          />
+                        </TableCell>
+                        <TableCell>{formatDiaImpacto(debito)}</TableCell>
+                        <TableCell>{debito.frecuencia?.nombre_frecuencia || '-'}</TableCell>
+                        <TableCell>
+                          {debito.categoria?.nombre_categoria || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {debito.ultima_fecha_generado
+                            ? formatDate(debito.ultima_fecha_generado)
+                            : 'Nunca'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {debito.activo ? (
+                              isProcesadoEsteMes(debito.ultima_fecha_generado) ? (
+                                <Badge variant="success">Pagado</Badge>
+                              ) : (
+                                <Badge variant="warning">Pendiente</Badge>
+                              )
+                            ) : (
+                              <Badge variant="secondary">Inactivo</Badge>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggle(debito.id)}
+                              title={debito.activo ? 'Desactivar' : 'Activar'}
+                            >
+                              {debito.activo ? (
+                                <PowerOff className="h-4 w-4 text-yellow-500" />
+                              ) : (
+                                <Power className="h-4 w-4 text-green-500" />
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {debito.activo && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleProcesar(debito.id)}
+                                disabled={procesarMutation.isPending}
+                                title="Procesar este mes"
+                              >
+                                <Play className="h-4 w-4 text-blue-500" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(debito)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteClick(debito.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingDebito ? 'Editar Debito Automatico' : 'Nuevo Debito Automatico'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingDebito
+                ? 'Modifica los datos del debito automatico'
+                : 'Completa el formulario para registrar un nuevo debito automatico'}
+            </DialogDescription>
+          </DialogHeader>
+          <DebitoAutomaticoForm
+            initialData={editingDebito || undefined}
+            onSubmit={handleSubmit}
+            onCancel={() => {
+              setIsDialogOpen(false)
+              setEditingDebito(null)
+            }}
+            isSubmitting={createMutation.isPending || updateMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={confirmDialog.isOpen}
+        onOpenChange={confirmDialog.setIsOpen}
+        title="Eliminar débito automático"
+        description="¿Estás seguro de eliminar este débito automático? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        onConfirm={handleDeleteConfirm}
+        isLoading={deleteMutation.isPending}
+      />
+    </div>
+  )
+}

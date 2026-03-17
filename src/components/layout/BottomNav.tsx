@@ -24,15 +24,15 @@ const navItems = [
 ]
 
 const gastoOptions = [
-  { name: 'Gasto Único', href: '/gastos-unicos?new=true', basePath: '/gastos-unicos', icon: Wallet, description: 'Un gasto puntual' },
-  { name: 'Nueva Cuota', href: '/compras?new=true', basePath: '/compras', icon: ShoppingCart, description: 'Compra en cuotas' },
-  { name: 'Gasto Recurrente', href: '/gastos-recurrentes?new=true', basePath: '/gastos-recurrentes', icon: Repeat, description: 'Se repite cada mes' },
-  { name: 'Débito Automático', href: '/debitos-automaticos?new=true', basePath: '/debitos-automaticos', icon: CreditCard, description: 'Débito de cuenta' },
+  { name: 'Gasto Único', href: '/gastos?tab=unicos&new=true', basePath: '/gastos-unicos', icon: Wallet, description: 'Un gasto puntual' },
+  { name: 'Nueva Cuota', href: '/gastos?tab=cuotas&new=true', basePath: '/compras', icon: ShoppingCart, description: 'Compra en cuotas' },
+  { name: 'Gasto Recurrente', href: '/gastos?tab=recurrentes&new=true', basePath: '/gastos-recurrentes', icon: Repeat, description: 'Se repite cada mes' },
+  { name: 'Débito Automático', href: '/gastos?tab=debitos&new=true', basePath: '/debitos-automaticos', icon: CreditCard, description: 'Débito de cuenta' },
 ]
 
 const ingresoOptions = [
-  { name: 'Ingreso Único', href: '/ingresos-unicos?new=true', basePath: '/ingresos-unicos', icon: Banknote, description: 'Un ingreso puntual' },
-  { name: 'Ingreso Recurrente', href: '/ingresos-recurrentes?new=true', basePath: '/ingresos-recurrentes', icon: CalendarDays, description: 'Sueldo, renta, etc.' },
+  { name: 'Ingreso Único', href: '/ingresos?tab=unicos&new=true', basePath: '/ingresos-unicos', icon: Banknote, description: 'Un ingreso puntual' },
+  { name: 'Ingreso Recurrente', href: '/ingresos?tab=recurrentes&new=true', basePath: '/ingresos-recurrentes', icon: CalendarDays, description: 'Sueldo, renta, etc.' },
 ]
 
 export function BottomNav() {

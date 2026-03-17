@@ -49,6 +49,13 @@ export function SearchableSelect({
 
   const selectedLabel = options.find((opt) => opt.value === value)?.label
 
+  const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+    if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ")) {
+      e.preventDefault()
+      setOpen(true)
+    }
+  }, [open])
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -57,6 +64,7 @@ export function SearchableSelect({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
+          onKeyDown={handleKeyDown}
           className={cn(
             "w-full justify-between font-normal",
             !value && "text-muted-foreground",

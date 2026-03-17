@@ -120,21 +120,37 @@ describe('MyButton', () => {
 
 ### Unit Tests
 
-#### Schemas (16 tests)
+#### Schemas (47 tests)
 - ✅ `tarjeta.test.ts` - Validaciones del schema de tarjetas
   - Casos válidos (débito, crédito, virtual)
   - Validaciones de campos requeridos
   - Validaciones de rangos (días 1-31)
   - Edge cases
+- ✅ `gastoUnico.test.ts` - Validaciones del schema de gastos únicos
+- ✅ `compra.test.ts` - Validaciones del schema de compras
 
-#### Hooks (14 tests)
+#### Components (16 tests)
+- ✅ `ThemeToggle.test.tsx` - Toggle de tema claro/oscuro
+- ✅ `ConfirmDialog.test.tsx` - Dialog de confirmación reutilizable
+  - Renderizado de título, descripción y botones
+  - Labels personalizables
+  - Callbacks de confirmar/cancelar
+  - Estado de loading
+
+#### Hooks (20 tests)
 - ✅ `useCatalogos.test.tsx` - Hooks de catálogos hardcodeados
   - useCategorias - 35 categorías
   - useImportancias - 5 importancias
   - useTiposPago - 6 tipos de pago
   - useFrecuencias - 8 frecuencias
+- ✅ `useConfirmDialog.test.ts` - Hook de gestión de estado para confirm dialogs
+  - Estado inicial, requestConfirm, confirm, cancel
+  - Requests secuenciales
 
-**Total: 30 tests pasando ✓**
+#### Utils (25 tests)
+- ✅ `filtering.test.ts` - Funciones de filtrado
+
+**Total: 108 tests pasando ✓**
 
 ## 📊 Próximos Tests a Implementar
 

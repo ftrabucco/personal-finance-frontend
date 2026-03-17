@@ -40,6 +40,8 @@ import {
   useToggleFuenteIngresoActivo,
 } from '@/lib/hooks/useFuentesIngresoEditables'
 import { useModulosDisponibles, useToggleModulo, usePreferencias } from '@/lib/hooks/usePreferencias'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog'
 import type { Categoria, FuenteIngreso } from '@/types'
 
 // Common emoji options for categories
@@ -89,6 +91,9 @@ export default function ConfiguracionPage() {
   const deleteFuenteMutation = useDeleteFuenteIngreso()
   const toggleFuenteMutation = useToggleFuenteIngresoActivo()
 
+  const confirmDialogCat = useConfirmDialog()
+  const confirmDialogFuente = useConfirmDialog()
+
   // Modulos
   const { data: modulosDisponibles, isLoading: loadingModulos } = useModulosDisponibles()
   const { data: preferencias } = usePreferencias()
@@ -114,19 +119,23 @@ export default function ConfiguracionPage() {
     setIsCategoriaDialogOpen(true)
   }
 
-  const handleDeleteCategoria = async (categoria: Categoria) => {
+  const handleDeleteCategoriaClick = (categoria: Categoria) => {
     if (categoria.es_sistema) {
       toast.error('Las categorias del sistema no se pueden eliminar')
       return
     }
-    if (window.confirm(`¿Eliminar la categoria "${categoria.nombre_categoria}"?`)) {
-      try {
-        await deleteCategoriaMutation.mutateAsync(categoria.id)
-        toast.success('Categoria eliminada')
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Error al eliminar'
-        toast.error(errorMessage)
-      }
+    confirmDialogCat.requestConfirm(categoria.id)
+  }
+
+  const handleDeleteCategoriaConfirm = async () => {
+    const id = confirmDialogCat.confirm()
+    if (id == null) return
+    try {
+      await deleteCategoriaMutation.mutateAsync(id)
+      toast.success('Categoria eliminada')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error al eliminar'
+      toast.error(errorMessage)
     }
   }
 
@@ -191,19 +200,23 @@ export default function ConfiguracionPage() {
     setIsFuenteDialogOpen(true)
   }
 
-  const handleDeleteFuente = async (fuente: FuenteIngreso) => {
+  const handleDeleteFuenteClick = (fuente: FuenteIngreso) => {
     if (fuente.es_sistema) {
       toast.error('Las fuentes del sistema no se pueden eliminar')
       return
     }
-    if (window.confirm(`¿Eliminar la fuente "${fuente.nombre}"?`)) {
-      try {
-        await deleteFuenteMutation.mutateAsync(fuente.id)
-        toast.success('Fuente eliminada')
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Error al eliminar'
-        toast.error(errorMessage)
-      }
+    confirmDialogFuente.requestConfirm(fuente.id)
+  }
+
+  const handleDeleteFuenteConfirm = async () => {
+    const id = confirmDialogFuente.confirm()
+    if (id == null) return
+    try {
+      await deleteFuenteMutation.mutateAsync(id)
+      toast.success('Fuente eliminada')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error al eliminar'
+      toast.error(errorMessage)
     }
   }
 
@@ -444,7 +457,7 @@ export default function ConfiguracionPage() {
                               <Button variant="ghost" size="icon" onClick={() => handleEditCategoria(cat)} title="Editar">
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDeleteCategoria(cat)} title="Eliminar">
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteCategoriaClick(cat)} title="Eliminar">
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </>
@@ -498,7 +511,7 @@ export default function ConfiguracionPage() {
                                     <Button variant="ghost" size="sm" onClick={() => handleEditCategoria(cat)} title="Editar">
                                       <Pencil className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm" onClick={() => handleDeleteCategoria(cat)} title="Eliminar">
+                                    <Button variant="ghost" size="sm" onClick={() => handleDeleteCategoriaClick(cat)} title="Eliminar">
                                       <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                   </>
@@ -572,7 +585,7 @@ export default function ConfiguracionPage() {
                               <Button variant="ghost" size="icon" onClick={() => handleEditFuente(fuente)} title="Editar">
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDeleteFuente(fuente)} title="Eliminar">
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteFuenteClick(fuente)} title="Eliminar">
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </>
@@ -626,7 +639,7 @@ export default function ConfiguracionPage() {
                                     <Button variant="ghost" size="sm" onClick={() => handleEditFuente(fuente)} title="Editar">
                                       <Pencil className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm" onClick={() => handleDeleteFuente(fuente)} title="Eliminar">
+                                    <Button variant="ghost" size="sm" onClick={() => handleDeleteFuenteClick(fuente)} title="Eliminar">
                                       <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                   </>
@@ -647,7 +660,7 @@ export default function ConfiguracionPage() {
 
       {/* Categoria Dialog */}
       <Dialog open={isCategoriaDialogOpen} onOpenChange={setIsCategoriaDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingCategoria ? 'Editar Categoria' : 'Nueva Categoria'}
@@ -698,7 +711,7 @@ export default function ConfiguracionPage() {
 
       {/* Fuente Dialog */}
       <Dialog open={isFuenteDialogOpen} onOpenChange={setIsFuenteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingFuente ? 'Editar Fuente' : 'Nueva Fuente de Ingreso'}
@@ -746,6 +759,26 @@ export default function ConfiguracionPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDialogCat.isOpen}
+        onOpenChange={confirmDialogCat.setIsOpen}
+        title="Eliminar categoría"
+        description="¿Estás seguro de eliminar esta categoría? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        onConfirm={handleDeleteCategoriaConfirm}
+        isLoading={deleteCategoriaMutation.isPending}
+      />
+
+      <ConfirmDialog
+        open={confirmDialogFuente.isOpen}
+        onOpenChange={confirmDialogFuente.setIsOpen}
+        title="Eliminar fuente"
+        description="¿Estás seguro de eliminar esta fuente? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        onConfirm={handleDeleteFuenteConfirm}
+        isLoading={deleteFuenteMutation.isPending}
+      />
     </div>
   )
 }

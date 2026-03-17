@@ -4,7 +4,6 @@ import { useMemo } from 'react'
 import { useAuth } from '@/lib/auth/authContext'
 import { useModulosContext } from '@/lib/context/ModulosContext'
 import { ModulosDiscoveryBanner } from '@/components/ModulosDiscoveryBanner'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   Card,
@@ -15,11 +14,8 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
-  CreditCard,
-  ShoppingCart,
   Repeat,
   Receipt,
-  Plus,
   RefreshCw,
   DollarSign,
   TrendingUp,
@@ -28,20 +24,17 @@ import {
   Heart,
   Calendar,
   Zap,
+  ShoppingCart,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useTarjetas } from '@/lib/hooks/useTarjetas'
 import { useAllGastos } from '@/lib/hooks/useGastos'
-import { useCompras } from '@/lib/hooks/useCompras'
-import { useGastosRecurrentes } from '@/lib/hooks/useGastosRecurrentes'
-import { useDebitosAutomaticos } from '@/lib/hooks/useDebitosAutomaticos'
-import { useGastosUnicos } from '@/lib/hooks/useGastosUnicos'
+import { useCategorias } from '@/lib/hooks/useCatalogos'
 import { useProcesarTodosPendientes } from '@/lib/hooks/useProcesamiento'
-import { useTipoCambioActual, useActualizarTipoCambio } from '@/lib/hooks/useTipoCambio'
 import { useSaludFinanciera, useProyeccion } from '@/lib/hooks/useAnalisis'
 import { useIngresosUnicos } from '@/lib/hooks/useIngresosUnicos'
 import { useIngresosRecurrentes } from '@/lib/hooks/useIngresosRecurrentes'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
+import { cn } from '@/lib/utils'
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 import {
@@ -63,38 +56,23 @@ export default function DashboardPage() {
   const router = useRouter()
   const { isModuloActivo } = useModulosContext()
 
-  const { data: tarjetasResponse } = useTarjetas()
   const { data: gastosResponse } = useAllGastos()
-  const { data: comprasResponse } = useCompras()
-  const { data: gastosRecurrentesResponse } = useGastosRecurrentes()
-  const { data: debitosResponse } = useDebitosAutomaticos()
-  const { data: gastosUnicosResponse } = useGastosUnicos()
   const procesarPendientes = useProcesarTodosPendientes()
-  const { data: tipoCambioResponse, isError: tipoCambioError } = useTipoCambioActual()
-  const actualizarTipoCambio = useActualizarTipoCambio()
   const { data: saludResponse } = useSaludFinanciera('mes')
   const { data: proyeccionResponse } = useProyeccion(1)
   const { data: ingresosUnicosResponse } = useIngresosUnicos()
   const { data: ingresosRecurrentesResponse } = useIngresosRecurrentes()
+  const { data: categoriasResponse } = useCategorias()
 
-  const tarjetas = tarjetasResponse?.data || []
+  const categorias = categoriasResponse?.data || []
+
   const ingresosUnicos = ingresosUnicosResponse?.data || []
   const ingresosRecurrentes = ingresosRecurrentesResponse?.data || []
   const gastos = gastosResponse?.data || []
-  const compras = comprasResponse?.data || []
-  const gastosRecurrentes = gastosRecurrentesResponse?.data || []
-  const debitos = debitosResponse?.data || []
-  const gastosUnicosList = gastosUnicosResponse?.data || []
 
   const handleProcesarPendientes = () => {
     procesarPendientes.mutate()
   }
-
-  const handleActualizarTipoCambio = () => {
-    actualizarTipoCambio.mutate()
-  }
-
-  const tipoCambio = tipoCambioResponse?.data
 
   // Calcular gastos del mes actual y anterior
   const now = new Date()
@@ -266,133 +244,41 @@ export default function DashboardPage() {
         mes: format(mesDate, 'MMM', { locale: es }),
         gastos: totalGastos,
         ingresos: totalIngresosU + totalIngresosR,
+        dateFrom: format(inicio, 'yyyy-MM-dd'),
+        dateTo: format(fin, 'yyyy-MM-dd'),
       })
     }
     return meses
   }, [gastos, ingresosUnicos, ingresosRecurrentes, now])
 
-  const comprasPendientes = compras.filter((c) => c.pendiente_cuotas).length
-
-  // Totales de gastos recurrentes y estado de procesamiento
-  const recurrentesStatus = useMemo(() => {
-    const activos = gastosRecurrentes.filter((g) => g.activo)
-    // Contar cuántos ya fueron procesados este mes (existen en gastosDelMes con tipo_origen='recurrente')
-    const procesadosIds = new Set(
-      gastosDelMes
-        .filter((g) => g.tipo_origen === 'recurrente')
-        .map((g) => g.id_origen)
-    )
-    const procesados = activos.filter((g) => procesadosIds.has(g.id)).length
-    const pendientes = activos.length - procesados
-
-    return {
-      ars: activos.reduce((sum, g) => sum + (Number(g.monto_ars) || 0), 0),
-      usd: activos.reduce((sum, g) => sum + (Number(g.monto_usd) || 0), 0),
-      total: activos.length,
-      procesados,
-      pendientes,
-      todosProcesados: pendientes === 0 && activos.length > 0,
+  // Desglose de gastos del mes por tipo_origen (datos reales procesados)
+  const gastosPorTipo = useMemo(() => {
+    const tipos = {
+      unico: { ars: 0, count: 0 },
+      recurrente: { ars: 0, count: 0 },
+      debito_automatico: { ars: 0, count: 0 },
+      compra: { ars: 0, count: 0 },
+      otro: { ars: 0, count: 0 },
     }
-  }, [gastosRecurrentes, gastosDelMes])
 
-  // Totales de débitos automáticos y estado de procesamiento
-  const debitosStatus = useMemo(() => {
-    const activos = debitos.filter((d) => d.activo)
-    // Contar cuántos ya fueron procesados este mes
-    const procesadosIds = new Set(
-      gastosDelMes
-        .filter((g) => g.tipo_origen === 'debito_automatico')
-        .map((g) => g.id_origen)
-    )
-    const procesados = activos.filter((d) => procesadosIds.has(d.id)).length
-    const pendientes = activos.length - procesados
+    gastosDelMes.forEach((g) => {
+      const monto = parseFloat(g.monto_ars)
+      const tipo = g.tipo_origen as keyof typeof tipos
+      if (tipos[tipo]) {
+        tipos[tipo].ars += monto
+        tipos[tipo].count += 1
+      } else {
+        tipos.otro.ars += monto
+        tipos.otro.count += 1
+      }
+    })
 
-    return {
-      ars: activos.reduce((sum, d) => sum + (Number(d.monto_ars) || 0), 0),
-      usd: activos.reduce((sum, d) => sum + (Number(d.monto_usd) || 0), 0),
-      total: activos.length,
-      procesados,
-      pendientes,
-      todosProcesados: pendientes === 0 && activos.length > 0,
-    }
-  }, [debitos, gastosDelMes])
-
-  // Gastos únicos del mes actual
-  const gastosUnicosDelMes = useMemo(() =>
-    gastosUnicosList.filter((g) => {
-      const fecha = new Date(g.fecha)
-      return fecha >= startOfCurrentMonth && fecha <= endOfCurrentMonth
-    }),
-    [gastosUnicosList, startOfCurrentMonth, endOfCurrentMonth]
-  )
-
-  const totalesGastosUnicos = useMemo(() => ({
-    ars: gastosUnicosDelMes.reduce((sum, g) => sum + (Number(g.monto_ars) || 0), 0),
-    usd: gastosUnicosDelMes.reduce((sum, g) => sum + (Number(g.monto_usd) || 0), 0),
-    count: gastosUnicosDelMes.length,
-  }), [gastosUnicosDelMes])
+    return tipos
+  }, [gastosDelMes])
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* Exchange Rate Alert */}
-      {(tipoCambioError || !tipoCambio) && (
-        <Card className="border-orange-500 bg-orange-50 dark:bg-orange-950">
-          <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <DollarSign className="h-5 w-5 text-orange-600 shrink-0" />
-              <div>
-                <p className="font-medium text-orange-800 dark:text-orange-200">
-                  Tipo de cambio no configurado
-                </p>
-                <p className="text-sm text-orange-600 dark:text-orange-300">
-                  Para registrar gastos en USD necesitas cargar el tipo de cambio
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={handleActualizarTipoCambio}
-              disabled={actualizarTipoCambio.isPending}
-              variant="outline"
-              size="sm"
-              className="gap-2 border-orange-500 text-orange-700 hover:bg-orange-100 w-full sm:w-auto"
-            >
-              <RefreshCw className={`h-4 w-4 ${actualizarTipoCambio.isPending ? 'animate-spin' : ''}`} />
-              {actualizarTipoCambio.isPending ? 'Actualizando...' : 'Cargar Tipo de Cambio'}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Exchange Rate Info (when available) */}
-      {tipoCambio && !tipoCambioError && (
-        <Card className="border-green-500 bg-green-50 dark:bg-green-950">
-          <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <DollarSign className="h-5 w-5 text-green-600 shrink-0" />
-              <div>
-                <p className="font-medium text-green-800 dark:text-green-200">
-                  Tipo de cambio: ${tipoCambio.valor_venta_usd_ars?.toLocaleString('es-AR')} ARS/USD
-                </p>
-                <p className="text-sm text-green-600 dark:text-green-300">
-                  Fuente: {tipoCambio.fuente} - Actualizado: {tipoCambio.fecha}
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={handleActualizarTipoCambio}
-              disabled={actualizarTipoCambio.isPending}
-              variant="ghost"
-              size="sm"
-              className="gap-2 w-full sm:w-auto"
-            >
-              <RefreshCw className={`h-4 w-4 ${actualizarTipoCambio.isPending ? 'animate-spin' : ''}`} />
-              Actualizar
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Welcome */}
+      {/* 1. Welcome + Process Pending */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold md:text-3xl">Hola, {user?.nombre}!</h1>
@@ -412,22 +298,17 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* Discovery Banner - shows once to new users */}
+      {/* 2. Discovery Banner */}
       <ModulosDiscoveryBanner />
 
-      {/* Stats Cards - Core: Gastos del Mes (always visible) */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6 md:gap-4">
-        {/* Gastos del Mes - Always visible (core) */}
+      {/* 3. Main Stats Row - 4 cards */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        {/* Gastos del Mes */}
         <Card className="overflow-hidden border-l-4 border-l-red-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="space-y-1">
-              <CardTitle className="text-sm font-medium">
-                Gastos del Mes
-              </CardTitle>
-              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                Gastado
-              </Badge>
-            </div>
+            <CardTitle className="text-sm font-medium">
+              Gastos del Mes
+            </CardTitle>
             <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
@@ -455,152 +336,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Tarjetas - Only if tarjetas module is active */}
-        {isModuloActivo('tarjetas') && (
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tarjetas</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg sm:text-xl md:text-2xl font-bold">{tarjetas.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {tarjetas.filter((t) => t.tipo === 'credito').length} crédito,{' '}
-              {tarjetas.filter((t) => t.tipo === 'debito').length} débito
-            </p>
-          </CardContent>
-        </Card>
-        )}
-
-        {/* Compras en Cuotas - Only if compras module is active */}
-        {isModuloActivo('compras') && (
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Compras en Cuotas
-            </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg sm:text-xl md:text-2xl font-bold">{comprasPendientes}</div>
-            <p className="text-xs text-muted-foreground">
-              Con cuotas pendientes
-            </p>
-          </CardContent>
-        </Card>
-        )}
-
-        {/* Gastos Recurrentes - Only if gastos_recurrentes module is active */}
-        {isModuloActivo('gastos_recurrentes') && (
-        <Card className={`overflow-hidden border-l-4 ${recurrentesStatus.todosProcesados ? 'border-l-red-500' : 'border-l-blue-500'}`}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="space-y-1">
-              <CardTitle className="text-sm font-medium">
-                Gastos Recurrentes
-              </CardTitle>
-              {recurrentesStatus.todosProcesados ? (
-                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                  Gastado
-                </Badge>
-              ) : recurrentesStatus.procesados > 0 ? (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                  {recurrentesStatus.procesados}/{recurrentesStatus.total} pagos
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                  Compromiso
-                </Badge>
-              )}
-            </div>
-            <Repeat className="h-4 w-4 text-muted-foreground shrink-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(recurrentesStatus.ars)}>
-                {formatCurrencyCompact(recurrentesStatus.ars)}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {formatCurrencyCompact(recurrentesStatus.usd, 'USD')}
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {recurrentesStatus.total} activos
-            </p>
-          </CardContent>
-        </Card>
-        )}
-
-        {/* Débitos Automáticos - Only if debitos_automaticos module is active */}
-        {isModuloActivo('debitos_automaticos') && (
-        <Card className={`overflow-hidden border-l-4 ${debitosStatus.todosProcesados ? 'border-l-red-500' : 'border-l-blue-500'}`}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="space-y-1">
-              <CardTitle className="text-sm font-medium">
-                Débitos Automáticos
-              </CardTitle>
-              {debitosStatus.todosProcesados ? (
-                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                  Gastado
-                </Badge>
-              ) : debitosStatus.procesados > 0 ? (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                  {debitosStatus.procesados}/{debitosStatus.total} pagos
-                </Badge>
-              ) : (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                  Compromiso
-                </Badge>
-              )}
-            </div>
-            <Zap className="h-4 w-4 text-muted-foreground shrink-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(debitosStatus.ars)}>
-                {formatCurrencyCompact(debitosStatus.ars)}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {formatCurrencyCompact(debitosStatus.usd, 'USD')}
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {debitosStatus.total} activos
-            </p>
-          </CardContent>
-        </Card>
-        )}
-
-        {/* Gastos Únicos - Always visible (core) */}
-        <Card className="overflow-hidden border-l-4 border-l-red-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="space-y-1">
-              <CardTitle className="text-sm font-medium">
-                Gastos Únicos
-              </CardTitle>
-              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                Gastado
-              </Badge>
-            </div>
-            <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <div className="text-lg sm:text-xl md:text-2xl font-bold truncate" title={formatCurrency(totalesGastosUnicos.ars)}>
-                {formatCurrencyCompact(totalesGastosUnicos.ars)}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {formatCurrencyCompact(totalesGastosUnicos.usd, 'USD')}
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {totalesGastosUnicos.count} este mes
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Income & Balance Cards - Always visible (core) */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+        {/* Ingresos del Mes */}
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -617,12 +353,10 @@ export default function DashboardPage() {
                 {formatCurrencyCompact(totalIngresosDelMesUSD, 'USD')}
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {isModuloActivo('ingresos_recurrentes') ? `${ingresosRecurrentes.filter(i => i.activo).length} fijos + ` : ''}{ingresosUnicosDelMes.length} únicos
-            </p>
           </CardContent>
         </Card>
 
+        {/* Balance Neto */}
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -646,12 +380,10 @@ export default function DashboardPage() {
                 {balanceNetoUSD >= 0 ? '+' : '-'}{formatCurrencyCompact(Math.abs(balanceNetoUSD), 'USD')}
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Ingresos - Gastos
-            </p>
           </CardContent>
         </Card>
 
+        {/* Tasa de Ahorro */}
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -672,7 +404,83 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Quick Insights - Salud Financiera y Proyecciones (only if modules active) */}
+      {/* 4. Desglose de Gastos del Mes */}
+      {gastosDelMes.length > 0 && (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Desglose del Mes</CardTitle>
+          <CardDescription>
+            De dónde vienen tus gastos de {format(now, 'MMMM', { locale: es })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {gastosPorTipo.recurrente.count > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-3">
+                  <Repeat className="h-4 w-4 text-blue-500 shrink-0" />
+                  <span>Recurrentes</span>
+                  <span className="text-xs text-muted-foreground">({gastosPorTipo.recurrente.count})</span>
+                </div>
+                <span className="font-medium">{formatCurrencyCompact(gastosPorTipo.recurrente.ars)}</span>
+              </div>
+            )}
+
+            {gastosPorTipo.debito_automatico.count > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-3">
+                  <Zap className="h-4 w-4 text-yellow-500 shrink-0" />
+                  <span>Débitos Auto</span>
+                  <span className="text-xs text-muted-foreground">({gastosPorTipo.debito_automatico.count})</span>
+                </div>
+                <span className="font-medium">{formatCurrencyCompact(gastosPorTipo.debito_automatico.ars)}</span>
+              </div>
+            )}
+
+            {gastosPorTipo.compra.count > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-3">
+                  <ShoppingCart className="h-4 w-4 text-purple-500 shrink-0" />
+                  <span>Cuotas</span>
+                  <span className="text-xs text-muted-foreground">({gastosPorTipo.compra.count})</span>
+                </div>
+                <span className="font-medium">{formatCurrencyCompact(gastosPorTipo.compra.ars)}</span>
+              </div>
+            )}
+
+            {gastosPorTipo.unico.count > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-3">
+                  <Receipt className="h-4 w-4 text-red-500 shrink-0" />
+                  <span>Gastos Únicos</span>
+                  <span className="text-xs text-muted-foreground">({gastosPorTipo.unico.count})</span>
+                </div>
+                <span className="font-medium">{formatCurrencyCompact(gastosPorTipo.unico.ars)}</span>
+              </div>
+            )}
+
+            {gastosPorTipo.otro.count > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-3">
+                  <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>Otros</span>
+                  <span className="text-xs text-muted-foreground">({gastosPorTipo.otro.count})</span>
+                </div>
+                <span className="font-medium">{formatCurrencyCompact(gastosPorTipo.otro.ars)}</span>
+              </div>
+            )}
+
+            {/* Total - debe coincidir exactamente con "Gastos del Mes" */}
+            <div className="border-t pt-3 flex items-center justify-between text-sm font-semibold">
+              <span>Total</span>
+              <span>{formatCurrencyCompact(totalGastosDelMes)}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      )}
+
+      {/* 5. Quick Insights - Salud Financiera y Proyecciones */}
       {(isModuloActivo('salud_financiera') || isModuloActivo('proyecciones')) && (
       <div className="grid gap-3 md:gap-4 md:grid-cols-2">
         {/* Salud Financiera Widget */}
@@ -773,7 +581,7 @@ export default function DashboardPage() {
       </div>
       )}
 
-      {/* Charts Row */}
+      {/* 6. Charts Row */}
       <div className="grid gap-3 md:gap-4 md:grid-cols-2">
         {/* Gastos por Categoría - Pie Chart */}
         <Card>
@@ -797,9 +605,16 @@ export default function DashboardPage() {
                         outerRadius={80}
                         paddingAngle={2}
                         dataKey="value"
+                        className="cursor-pointer"
+                        onClick={(data) => {
+                          if (data?.name && data.name !== 'Otros') {
+                            const cat = categorias.find((c: { id: number; nombre_categoria: string }) => c.nombre_categoria === data.name)
+                            if (cat) router.push(`/gastos?categoria=${cat.id}`)
+                          }
+                        }}
                       >
                         {topCategorias.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="cursor-pointer" />
                         ))}
                       </Pie>
                       <Tooltip
@@ -820,18 +635,25 @@ export default function DashboardPage() {
                   </ResponsiveContainer>
                 </div>
                 <div className="w-full lg:w-1/2 space-y-2">
-                  {topCategorias.slice(0, 5).map((cat, index) => (
-                    <div key={cat.name} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                        />
-                        <span className="truncate max-w-[120px]">{cat.name}</span>
+                  {topCategorias.slice(0, 5).map((cat, index) => {
+                    const catObj = categorias.find((c: { id: number; nombre_categoria: string }) => c.nombre_categoria === cat.name)
+                    return (
+                      <div
+                        key={cat.name}
+                        className={cn("flex items-center justify-between text-sm", catObj && "cursor-pointer hover:bg-accent/50 rounded px-1 -mx-1 py-0.5")}
+                        onClick={() => catObj && router.push(`/gastos?categoria=${catObj.id}`)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          />
+                          <span className="truncate max-w-[120px]">{cat.name}</span>
+                        </div>
+                        <span className="font-medium">{formatCurrency(cat.value)}</span>
                       </div>
-                      <span className="font-medium">{formatCurrency(cat.value)}</span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             ) : (
@@ -854,7 +676,12 @@ export default function DashboardPage() {
             {balancePorMes.some(m => m.gastos > 0 || m.ingresos > 0) ? (
               <div className="h-[200px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={balancePorMes}>
+                  <BarChart data={balancePorMes} className="cursor-pointer" onClick={(state: any) => {
+                    if (state?.activePayload?.[0]?.payload) {
+                      const d = state.activePayload[0].payload
+                      router.push(`/gastos?dateFrom=${d.dateFrom}&dateTo=${d.dateTo}`)
+                    }
+                  }}>
                     <XAxis
                       dataKey="mes"
                       tick={{ fontSize: 12 }}
@@ -902,141 +729,40 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Quick Actions - Hidden on mobile (using BottomNav instead), only if any action modules are active */}
-      {(isModuloActivo('compras') || isModuloActivo('tarjetas')) && (
-      <Card className="hidden md:block">
+      {/* 7. Recent Activity - Gastos Recientes (full width) */}
+      <Card>
         <CardHeader>
-          <CardTitle>Acciones Rápidas</CardTitle>
-          <CardDescription>
-            Gestiona tus finanzas rápidamente
-          </CardDescription>
+          <CardTitle className="text-lg">Gastos Recientes</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Link href="/gastos-unicos">
-              <Card className="cursor-pointer hover:bg-accent transition-colors">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Plus className="h-5 w-5" />
-                    Nuevo Gasto
-                  </CardTitle>
-                  <CardDescription>Registra un gasto único</CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-
-            {isModuloActivo('compras') && (
-            <Link href="/compras">
-              <Card className="cursor-pointer hover:bg-accent transition-colors">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Plus className="h-5 w-5" />
-                    Nueva Cuota
-                  </CardTitle>
-                  <CardDescription>
-                    Registra una compra en cuotas
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-            )}
-
-            {isModuloActivo('tarjetas') && (
-            <Link href="/tarjetas">
-              <Card className="cursor-pointer hover:bg-accent transition-colors">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Plus className="h-5 w-5" />
-                    Nueva Tarjeta
-                  </CardTitle>
-                  <CardDescription>Agrega una tarjeta nueva</CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
+          <div className="space-y-3">
+            {gastos.slice(0, 5).map((gasto) => (
+              <div
+                key={gasto.id}
+                className="flex items-center justify-between cursor-pointer hover:bg-accent/50 rounded-lg px-2 -mx-2 py-1 transition-colors"
+                onClick={() => router.push('/gastos')}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {gasto.descripcion}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(gasto.fecha)}
+                  </p>
+                </div>
+                <div className="text-sm font-semibold">
+                  {formatCurrency(parseFloat(gasto.monto_ars))}
+                </div>
+              </div>
+            ))}
+            {gastos.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No hay gastos registrados
+              </p>
             )}
           </div>
         </CardContent>
       </Card>
-      )}
-
-      {/* Recent Activity - Always show Gastos Recientes (core), Tarjetas only if module active */}
-      <div className={`grid gap-3 md:gap-4 ${isModuloActivo('tarjetas') ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Gastos Recientes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {gastos.slice(0, 5).map((gasto) => (
-                <div
-                  key={gasto.id}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {gasto.descripcion}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(gasto.fecha)}
-                    </p>
-                  </div>
-                  <div className="text-sm font-semibold">
-                    {formatCurrency(parseFloat(gasto.monto_ars))}
-                  </div>
-                </div>
-              ))}
-              {gastos.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No hay gastos registrados
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {isModuloActivo('tarjetas') && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Mis Tarjetas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {tarjetas.slice(0, 5).map((tarjeta) => (
-                <div
-                  key={tarjeta.id}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {tarjeta.nombre}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {tarjeta.banco}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={
-                      tarjeta.tipo === 'credito'
-                        ? 'default'
-                        : tarjeta.tipo === 'debito'
-                          ? 'secondary'
-                          : 'outline'
-                    }
-                  >
-                    {tarjeta.tipo}
-                  </Badge>
-                </div>
-              ))}
-              {tarjetas.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No hay tarjetas registradas
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        )}
-      </div>
     </div>
   )
 }
