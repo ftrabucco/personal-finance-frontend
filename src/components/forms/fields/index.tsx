@@ -530,6 +530,50 @@ export function CantidadCuotasField<T extends FieldValues>({
 }
 
 // ============================================
+// Cuotas Pagadas Field (for Compras with pre-paid installments)
+// ============================================
+interface CuotasPagadasFieldProps<T extends FieldValues> {
+  control: Control<T>
+  name: FieldPath<T>
+  cantidadCuotas: number
+}
+
+export function CuotasPagadasField<T extends FieldValues>({
+  control,
+  name,
+  cantidadCuotas,
+}: CuotasPagadasFieldProps<T>) {
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Cuotas ya pagadas</FormLabel>
+          <FormControl>
+            <Input
+              type="number"
+              min="0"
+              max={cantidadCuotas}
+              placeholder="0"
+              {...field}
+              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+            />
+          </FormControl>
+          <FormDescription>
+            Si la compra ya tiene cuotas pagadas, indica cuantas.
+            {field.value > 0 && cantidadCuotas > 0 && (
+              <> Quedan {cantidadCuotas - field.value} cuota{cantidadCuotas - field.value !== 1 ? 's' : ''} por pagar.</>
+            )}
+          </FormDescription>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  )
+}
+
+// ============================================
 // Fuente de Ingreso Select Field
 // ============================================
 interface FuenteIngresoFieldProps<T extends FieldValues> {

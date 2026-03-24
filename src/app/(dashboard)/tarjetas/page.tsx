@@ -30,6 +30,7 @@ import {
 } from '@/lib/hooks/useTarjetas'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog'
+import { showErrorToast } from '@/lib/utils/errorHandler'
 import type { Tarjeta } from '@/types'
 
 export default function TarjetasPage() {
@@ -65,7 +66,7 @@ export default function TarjetasPage() {
     try {
       await deleteMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Error al eliminar tarjeta:', error)
+      showErrorToast(error)
     }
   }
 
@@ -82,7 +83,7 @@ export default function TarjetasPage() {
       setIsDialogOpen(false)
       setEditingTarjeta(null)
     } catch (error) {
-      console.error('Error al guardar tarjeta:', error)
+      showErrorToast(error)
     }
   }
 

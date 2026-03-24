@@ -31,6 +31,7 @@ import {
 } from '@/lib/hooks/useGastosUnicos'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
+import { showErrorToast } from '@/lib/utils/errorHandler'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog'
 import type { GastoUnico } from '@/types'
@@ -133,7 +134,7 @@ export function GastosUnicosTab() {
     try {
       await deleteMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Error al eliminar gasto:', error)
+      showErrorToast(error)
     }
   }
 
@@ -152,7 +153,7 @@ export function GastosUnicosTab() {
       setIsDialogOpen(false)
       setEditingGasto(null)
     } catch (error) {
-      console.error('Error al guardar gasto:', error)
+      showErrorToast(error)
     }
   }
 

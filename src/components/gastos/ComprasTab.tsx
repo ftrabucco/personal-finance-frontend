@@ -33,6 +33,7 @@ import {
 } from '@/lib/hooks/useCompras'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
+import { showErrorToast } from '@/lib/utils/errorHandler'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog'
 import type { Compra } from '@/types'
@@ -143,7 +144,7 @@ export function ComprasTab() {
     try {
       await deleteMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Error al eliminar compra:', error)
+      showErrorToast(error)
     }
   }
 
@@ -162,7 +163,7 @@ export function ComprasTab() {
       setIsDialogOpen(false)
       setEditingCompra(null)
     } catch (error) {
-      console.error('Error al guardar compra:', error)
+      showErrorToast(error)
     }
   }
 

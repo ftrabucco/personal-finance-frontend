@@ -20,6 +20,7 @@ import { useCreateGastoRecurrente } from '@/lib/hooks/useGastosRecurrentes'
 import { useCreateDebitoAutomatico } from '@/lib/hooks/useDebitosAutomaticos'
 import { useModulosContext } from '@/lib/context/ModulosContext'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
+import { showErrorToast } from '@/lib/utils/errorHandler'
 
 type GastoType = 'unico' | 'compra' | 'recurrente' | 'debito' | null
 
@@ -58,7 +59,7 @@ export function QuickGastoDialog({ open, onOpenChange }: QuickGastoDialogProps) 
       await createGastoUnico.mutateAsync(cleanFormData(data))
       handleClose()
     } catch (error) {
-      console.error('Error al crear gasto único:', error)
+      showErrorToast(error)
     }
   }
 
@@ -67,7 +68,7 @@ export function QuickGastoDialog({ open, onOpenChange }: QuickGastoDialogProps) 
       await createCompra.mutateAsync(cleanFormData(data))
       handleClose()
     } catch (error) {
-      console.error('Error al crear compra:', error)
+      showErrorToast(error)
     }
   }
 
@@ -76,7 +77,7 @@ export function QuickGastoDialog({ open, onOpenChange }: QuickGastoDialogProps) 
       await createRecurrente.mutateAsync(cleanFormData(data))
       handleClose()
     } catch (error) {
-      console.error('Error al crear gasto recurrente:', error)
+      showErrorToast(error)
     }
   }
 
@@ -85,7 +86,7 @@ export function QuickGastoDialog({ open, onOpenChange }: QuickGastoDialogProps) 
       await createDebito.mutateAsync(cleanFormData(data))
       handleClose()
     } catch (error) {
-      console.error('Error al crear débito automático:', error)
+      showErrorToast(error)
     }
   }
 

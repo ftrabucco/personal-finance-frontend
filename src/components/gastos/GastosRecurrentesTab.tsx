@@ -33,6 +33,7 @@ import {
 } from '@/lib/hooks/useGastosRecurrentes'
 import { useProcesarGastoRecurrenteIndividual } from '@/lib/hooks/useProcesamiento'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
+import { showErrorToast } from '@/lib/utils/errorHandler'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog'
 import type { GastoRecurrente } from '@/types'
@@ -137,7 +138,7 @@ export function GastosRecurrentesTab() {
     try {
       await deleteMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Error al eliminar gasto recurrente:', error)
+      showErrorToast(error)
     }
   }
 
@@ -145,7 +146,7 @@ export function GastosRecurrentesTab() {
     try {
       await toggleMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Error al cambiar estado:', error)
+      showErrorToast(error)
     }
   }
 
@@ -153,7 +154,7 @@ export function GastosRecurrentesTab() {
     try {
       await procesarMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Error al procesar gasto:', error)
+      showErrorToast(error)
     }
   }
 
@@ -170,7 +171,7 @@ export function GastosRecurrentesTab() {
       setIsDialogOpen(false)
       setEditingGasto(null)
     } catch (error) {
-      console.error('Error al guardar gasto:', error)
+      showErrorToast(error)
     }
   }
 

@@ -16,6 +16,7 @@ import { useCreateIngresoUnico } from '@/lib/hooks/useIngresosUnicos'
 import { useCreateIngresoRecurrente } from '@/lib/hooks/useIngresosRecurrentes'
 import { useModulosContext } from '@/lib/context/ModulosContext'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
+import { showErrorToast } from '@/lib/utils/errorHandler'
 
 type IngresoType = 'unico' | 'recurrente' | null
 
@@ -50,7 +51,7 @@ export function QuickIngresoDialog({ open, onOpenChange }: QuickIngresoDialogPro
       await createIngresoUnico.mutateAsync(cleanFormData(data))
       handleClose()
     } catch (error) {
-      console.error('Error al crear ingreso único:', error)
+      showErrorToast(error)
     }
   }
 
@@ -59,7 +60,7 @@ export function QuickIngresoDialog({ open, onOpenChange }: QuickIngresoDialogPro
       await createIngresoRecurrente.mutateAsync(cleanFormData(data))
       handleClose()
     } catch (error) {
-      console.error('Error al crear ingreso recurrente:', error)
+      showErrorToast(error)
     }
   }
 

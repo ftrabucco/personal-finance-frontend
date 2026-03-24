@@ -32,6 +32,7 @@ import {
   useToggleIngresoRecurrente,
 } from '@/lib/hooks/useIngresosRecurrentes'
 import { formatCurrency, formatCurrencyCompact } from '@/lib/utils/formatters'
+import { showErrorToast } from '@/lib/utils/errorHandler'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog'
 import type { IngresoRecurrente } from '@/types'
@@ -142,7 +143,7 @@ export function IngresosRecurrentesTab() {
     try {
       await deleteMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Error al eliminar ingreso:', error)
+      showErrorToast(error)
     }
   }
 
@@ -150,7 +151,7 @@ export function IngresosRecurrentesTab() {
     try {
       await toggleMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Error al cambiar estado:', error)
+      showErrorToast(error)
     }
   }
 
@@ -167,7 +168,7 @@ export function IngresosRecurrentesTab() {
       setIsDialogOpen(false)
       setEditingIngreso(null)
     } catch (error) {
-      console.error('Error al guardar ingreso:', error)
+      showErrorToast(error)
     }
   }
 
