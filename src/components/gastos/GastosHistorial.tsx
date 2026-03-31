@@ -13,6 +13,7 @@ import { useAllGastos, useDeleteGasto, useGenerateGastos } from '@/lib/hooks/use
 import { useCategorias, useImportancias } from '@/lib/hooks/useCatalogos'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
+import { showErrorToast, showSuccessToast } from '@/lib/utils/errorHandler'
 import { useSearchParams } from 'next/navigation'
 import { QuickGastoDialog } from '@/components/gastos/QuickGastoDialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -128,16 +129,16 @@ export function GastosHistorial() {
       await deleteMutation.mutateAsync(id)
       if (expandedId === id) setExpandedId(null)
     } catch (error) {
-      console.error('Error al eliminar gasto:', error)
+      showErrorToast(error)
     }
   }
 
   const handleGenerate = async () => {
     try {
       const result = await generateMutation.mutateAsync()
-      alert(`Se generaron ${result.data.generados} gastos nuevos`)
+      showSuccessToast(`Se generaron ${result.data.generados} gastos nuevos`)
     } catch (error) {
-      console.error('Error al generar gastos:', error)
+      showErrorToast(error)
     }
   }
 

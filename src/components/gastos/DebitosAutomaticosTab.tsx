@@ -33,6 +33,7 @@ import {
 } from '@/lib/hooks/useDebitosAutomaticos'
 import { useProcesarDebitoIndividual } from '@/lib/hooks/useProcesamiento'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
+import { showErrorToast } from '@/lib/utils/errorHandler'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog'
 import type { DebitoAutomatico } from '@/types'
@@ -155,7 +156,7 @@ export function DebitosAutomaticosTab() {
     try {
       await deleteMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Error al eliminar debito:', error)
+      showErrorToast(error)
     }
   }
 
@@ -163,7 +164,7 @@ export function DebitosAutomaticosTab() {
     try {
       await toggleMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Error al cambiar estado:', error)
+      showErrorToast(error)
     }
   }
 
@@ -171,7 +172,7 @@ export function DebitosAutomaticosTab() {
     try {
       await procesarMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Error al procesar debito:', error)
+      showErrorToast(error)
     }
   }
 
@@ -188,7 +189,7 @@ export function DebitosAutomaticosTab() {
       setIsDialogOpen(false)
       setEditingDebito(null)
     } catch (error) {
-      console.error('Error al guardar debito:', error)
+      showErrorToast(error)
     }
   }
 

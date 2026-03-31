@@ -8,10 +8,19 @@ const compraSchema = z.object({
   moneda_origen: z.enum(['ARS', 'USD'], { message: 'La moneda es requerida' }),
   fecha_compra: z.string().min(1, 'La fecha es requerida'),
   cantidad_cuotas: z.number().int().min(1, 'Debe tener al menos 1 cuota'),
+  cuotas_pagadas: z.number().int().min(0, 'Las cuotas pagadas no pueden ser negativas'),
   categoria_gasto_id: z.number({ message: 'La categoría es requerida' }),
   importancia_gasto_id: z.number({ message: 'La importancia es requerida' }),
   tipo_pago_id: z.number({ message: 'El tipo de pago es requerido' }),
   tarjeta_id: z.number().nullable(),
+}).superRefine((data, ctx) => {
+  if (data.cuotas_pagadas > data.cantidad_cuotas) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Las cuotas pagadas no pueden superar la cantidad total de cuotas',
+      path: ['cuotas_pagadas'],
+    })
+  }
 })
 
 describe('Compra Schema Validation', () => {
@@ -23,6 +32,7 @@ describe('Compra Schema Validation', () => {
         moneda_origen: 'ARS' as const,
         fecha_compra: '2024-01-15',
         cantidad_cuotas: 1,
+        cuotas_pagadas: 0,
         categoria_gasto_id: 4,
         importancia_gasto_id: 2,
         tipo_pago_id: 3,
@@ -40,6 +50,7 @@ describe('Compra Schema Validation', () => {
         moneda_origen: 'ARS' as const,
         fecha_compra: '2024-01-20',
         cantidad_cuotas: 12,
+        cuotas_pagadas: 0,
         categoria_gasto_id: 4,
         importancia_gasto_id: 3,
         tipo_pago_id: 3,
@@ -57,6 +68,7 @@ describe('Compra Schema Validation', () => {
         moneda_origen: 'USD' as const,
         fecha_compra: '2024-01-25',
         cantidad_cuotas: 1,
+        cuotas_pagadas: 0,
         categoria_gasto_id: 4,
         importancia_gasto_id: 2,
         tipo_pago_id: 3,
@@ -74,6 +86,7 @@ describe('Compra Schema Validation', () => {
         moneda_origen: 'ARS' as const,
         fecha_compra: '2024-01-15',
         cantidad_cuotas: 1,
+        cuotas_pagadas: 0,
         categoria_gasto_id: 1,
         importancia_gasto_id: 1,
         tipo_pago_id: 1,
@@ -93,6 +106,7 @@ describe('Compra Schema Validation', () => {
         moneda_origen: 'ARS' as const,
         fecha_compra: '2024-01-15',
         cantidad_cuotas: 0,
+        cuotas_pagadas: 0,
         categoria_gasto_id: 1,
         importancia_gasto_id: 1,
         tipo_pago_id: 1,
@@ -113,6 +127,7 @@ describe('Compra Schema Validation', () => {
         moneda_origen: 'ARS' as const,
         fecha_compra: '2024-01-15',
         cantidad_cuotas: -3,
+        cuotas_pagadas: 0,
         categoria_gasto_id: 1,
         importancia_gasto_id: 1,
         tipo_pago_id: 1,
@@ -130,6 +145,7 @@ describe('Compra Schema Validation', () => {
         moneda_origen: 'ARS' as const,
         fecha_compra: '2024-01-15',
         cantidad_cuotas: 3.5,
+        cuotas_pagadas: 0,
         categoria_gasto_id: 1,
         importancia_gasto_id: 1,
         tipo_pago_id: 1,
@@ -147,6 +163,7 @@ describe('Compra Schema Validation', () => {
         moneda_origen: 'ARS' as const,
         fecha_compra: '2024-01-15',
         cantidad_cuotas: 48,
+        cuotas_pagadas: 0,
         categoria_gasto_id: 1,
         importancia_gasto_id: 1,
         tipo_pago_id: 3,
@@ -166,6 +183,7 @@ describe('Compra Schema Validation', () => {
         moneda_origen: 'ARS' as const,
         fecha_compra: '2024-01-15',
         cantidad_cuotas: 1,
+        cuotas_pagadas: 0,
         categoria_gasto_id: 1,
         importancia_gasto_id: 1,
         tipo_pago_id: 1,
@@ -186,6 +204,7 @@ describe('Compra Schema Validation', () => {
         moneda_origen: 'ARS' as const,
         fecha_compra: '2024-01-15',
         cantidad_cuotas: 1,
+        cuotas_pagadas: 0,
         categoria_gasto_id: 1,
         importancia_gasto_id: 1,
         tipo_pago_id: 1,
@@ -194,6 +213,84 @@ describe('Compra Schema Validation', () => {
 
       const result = compraSchema.safeParse(invalidCompra)
       expect(result.success).toBe(false)
+    })
+  })
+
+  describe('Invalid cases - cuotas_pagadas', () => {
+    it('should reject cuotas_pagadas greater than cantidad_cuotas', () => {
+      const invalidCompra = {
+        descripcion: 'Test',
+        monto_total: 60000,
+        moneda_origen: 'ARS' as const,
+        fecha_compra: '2024-01-15',
+        cantidad_cuotas: 6,
+        cuotas_pagadas: 7,
+        categoria_gasto_id: 1,
+        importancia_gasto_id: 1,
+        tipo_pago_id: 1,
+        tarjeta_id: null,
+      }
+
+      const result = compraSchema.safeParse(invalidCompra)
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        const cuotasIssue = result.error.issues.find(i => i.path.includes('cuotas_pagadas'))
+        expect(cuotasIssue?.message).toBe('Las cuotas pagadas no pueden superar la cantidad total de cuotas')
+      }
+    })
+
+    it('should reject negative cuotas_pagadas', () => {
+      const invalidCompra = {
+        descripcion: 'Test',
+        monto_total: 60000,
+        moneda_origen: 'ARS' as const,
+        fecha_compra: '2024-01-15',
+        cantidad_cuotas: 6,
+        cuotas_pagadas: -1,
+        categoria_gasto_id: 1,
+        importancia_gasto_id: 1,
+        tipo_pago_id: 1,
+        tarjeta_id: null,
+      }
+
+      const result = compraSchema.safeParse(invalidCompra)
+      expect(result.success).toBe(false)
+    })
+
+    it('should accept cuotas_pagadas equal to cantidad_cuotas (fully paid)', () => {
+      const validCompra = {
+        descripcion: 'Fully paid purchase',
+        monto_total: 60000,
+        moneda_origen: 'ARS' as const,
+        fecha_compra: '2024-01-15',
+        cantidad_cuotas: 6,
+        cuotas_pagadas: 6,
+        categoria_gasto_id: 1,
+        importancia_gasto_id: 1,
+        tipo_pago_id: 1,
+        tarjeta_id: null,
+      }
+
+      const result = compraSchema.safeParse(validCompra)
+      expect(result.success).toBe(true)
+    })
+
+    it('should accept cuotas_pagadas less than cantidad_cuotas', () => {
+      const validCompra = {
+        descripcion: 'Partially paid purchase',
+        monto_total: 120000,
+        moneda_origen: 'ARS' as const,
+        fecha_compra: '2024-01-15',
+        cantidad_cuotas: 12,
+        cuotas_pagadas: 5,
+        categoria_gasto_id: 1,
+        importancia_gasto_id: 1,
+        tipo_pago_id: 3,
+        tarjeta_id: 1,
+      }
+
+      const result = compraSchema.safeParse(validCompra)
+      expect(result.success).toBe(true)
     })
   })
 
@@ -231,6 +328,7 @@ describe('Compra Schema Validation', () => {
         moneda_origen: 'ARS' as const,
         fecha_compra: '2024-01-15',
         cantidad_cuotas: 1,
+        cuotas_pagadas: 0,
         categoria_gasto_id: 1,
         importancia_gasto_id: 1,
         tipo_pago_id: 1,
@@ -248,6 +346,7 @@ describe('Compra Schema Validation', () => {
         moneda_origen: 'ARS' as const,
         fecha_compra: '2024-01-15',
         cantidad_cuotas: 1,
+        cuotas_pagadas: 0,
         categoria_gasto_id: 1,
         importancia_gasto_id: 1,
         tipo_pago_id: 1,

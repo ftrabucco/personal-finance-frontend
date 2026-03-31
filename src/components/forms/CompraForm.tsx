@@ -15,6 +15,7 @@ import {
   TarjetaField,
   FechaField,
   CantidadCuotasField,
+  CuotasPagadasField,
   FormActions,
 } from '@/components/forms/fields'
 import { useCatalogosCompletos } from '@/lib/hooks/useCatalogos'
@@ -28,10 +29,19 @@ const compraSchema = z.object({
   moneda_origen: z.enum(['ARS', 'USD'], { message: 'La moneda es requerida' }),
   fecha_compra: z.string().min(1, 'La fecha es requerida'),
   cantidad_cuotas: z.number().int().min(1, 'Debe tener al menos 1 cuota'),
+  cuotas_pagadas: z.number().int().min(0, 'Las cuotas pagadas no pueden ser negativas'),
   categoria_gasto_id: z.number({ message: 'La categoría es requerida' }),
   importancia_gasto_id: z.number({ message: 'La importancia es requerida' }),
   tipo_pago_id: z.number({ message: 'El tipo de pago es requerido' }),
   tarjeta_id: z.number().nullable(),
+}).superRefine((data, ctx) => {
+  if (data.cuotas_pagadas > data.cantidad_cuotas) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Las cuotas pagadas no pueden superar la cantidad total de cuotas',
+      path: ['cuotas_pagadas'],
+    })
+  }
 })
 
 type CompraFormValues = z.infer<typeof compraSchema>
@@ -64,6 +74,7 @@ export function CompraForm({
         ? formatDateForInput(initialData.fecha_compra)
         : format(new Date(), 'yyyy-MM-dd'),
       cantidad_cuotas: Number(initialData?.cantidad_cuotas) || 1,
+      cuotas_pagadas: 0,
       categoria_gasto_id: initialData?.categoria_gasto_id,
       importancia_gasto_id: initialData?.importancia_gasto_id,
       tipo_pago_id: initialData?.tipo_pago_id,
@@ -118,6 +129,14 @@ export function CompraForm({
           cuotaConvertida={cuotaConvertida}
           monedaActual={monedaActual}
         />
+
+        {!initialData?.id && (
+          <CuotasPagadasField
+            control={form.control}
+            name="cuotas_pagadas"
+            cantidadCuotas={cantidadCuotas}
+          />
+        )}
 
         <FechaField
           control={form.control}

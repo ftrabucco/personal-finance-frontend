@@ -29,6 +29,7 @@ import {
 } from '@/lib/hooks/useCuentasBancarias'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog'
+import { showErrorToast } from '@/lib/utils/errorHandler'
 import type { CuentaBancaria } from '@/types'
 
 export default function CuentasBancariasPage() {
@@ -62,13 +63,8 @@ export default function CuentasBancariasPage() {
     if (id == null) return
     try {
       await deleteMutation.mutateAsync(id)
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      if (errorMessage.includes('en uso') || errorMessage.includes('being used')) {
-        alert('No se puede eliminar la cuenta porque esta siendo usada en debitos automaticos')
-      } else {
-        console.error('Error al eliminar cuenta:', error)
-      }
+    } catch (error) {
+      showErrorToast(error)
     }
   }
 
@@ -91,7 +87,7 @@ export default function CuentasBancariasPage() {
       setIsDialogOpen(false)
       setEditingCuenta(null)
     } catch (error) {
-      console.error('Error al guardar cuenta:', error)
+      showErrorToast(error)
     }
   }
 

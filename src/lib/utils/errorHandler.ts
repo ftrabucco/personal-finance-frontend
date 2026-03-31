@@ -143,9 +143,15 @@ export function handleApiError(error: unknown, context?: Record<string, unknown>
       errorType = ErrorType.VALIDATION
       severity = ErrorSeverity.LOW
     }
-    // Errores de validación con details
+    // Errores de validación con details (array)
     else if (apiError && 'details' in apiError && Array.isArray(apiError.details)) {
       message = apiError.details.map((d) => d.message).join(', ')
+      errorType = ErrorType.VALIDATION
+      severity = ErrorSeverity.LOW
+    }
+    // Errores de validación con details (string)
+    else if (apiError && 'details' in apiError && typeof apiError.details === 'string') {
+      message = apiError.details
       errorType = ErrorType.VALIDATION
       severity = ErrorSeverity.LOW
     }

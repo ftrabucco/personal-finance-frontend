@@ -31,6 +31,7 @@ import {
 } from '@/lib/hooks/useIngresosUnicos'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import { cleanFormData } from '@/lib/utils/cleanFormData'
+import { showErrorToast } from '@/lib/utils/errorHandler'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog'
 import type { IngresoUnico } from '@/types'
@@ -139,7 +140,7 @@ export function IngresosUnicosTab() {
     try {
       await deleteMutation.mutateAsync(id)
     } catch (error) {
-      console.error('Error al eliminar ingreso:', error)
+      showErrorToast(error)
     }
   }
 
@@ -158,7 +159,7 @@ export function IngresosUnicosTab() {
       setIsDialogOpen(false)
       setEditingIngreso(null)
     } catch (error) {
-      console.error('Error al guardar ingreso:', error)
+      showErrorToast(error)
     }
   }
 
