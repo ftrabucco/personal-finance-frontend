@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { Trash2, RefreshCw, ChevronLeft, ChevronRight, X, Download, Plus, SlidersHorizontal, ChevronDown, CalendarDays, FolderOpen } from 'lucide-react'
-import { startOfMonth, endOfMonth, subMonths, format, isToday, isYesterday, isThisWeek, isThisMonth, parseISO } from 'date-fns'
+import { Trash2, RefreshCw, ChevronLeft, ChevronRight, X, Download, Plus, ChevronDown, CalendarDays, FolderOpen } from 'lucide-react'
+import { startOfMonth, endOfMonth, format, isToday, isYesterday, isThisWeek, isThisMonth, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,6 +13,8 @@ import { useAllGastos, useDeleteGasto, useGenerateGastos } from '@/lib/hooks/use
 import { useCategorias, useImportancias } from '@/lib/hooks/useCatalogos'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
+import { CollapsibleFilters } from '@/components/common/CollapsibleFilters'
+import { DATE_PRESETS } from '@/lib/utils/datePresets'
 import { showErrorToast, showSuccessToast } from '@/lib/utils/errorHandler'
 import { useSearchParams } from 'next/navigation'
 import { QuickGastoDialog } from '@/components/gastos/QuickGastoDialog'
@@ -47,12 +49,6 @@ function toDateString(date: Date): string {
   return format(date, 'yyyy-MM-dd')
 }
 
-const DATE_PRESETS = [
-  { label: 'Este mes', getRange: () => ({ from: toDateString(startOfMonth(new Date())), to: toDateString(endOfMonth(new Date())) }) },
-  { label: 'Mes anterior', getRange: () => ({ from: toDateString(startOfMonth(subMonths(new Date(), 1))), to: toDateString(endOfMonth(subMonths(new Date(), 1))) }) },
-  { label: 'Últimos 3 meses', getRange: () => ({ from: toDateString(startOfMonth(subMonths(new Date(), 2))), to: toDateString(endOfMonth(new Date())) }) },
-  { label: 'Últimos 6 meses', getRange: () => ({ from: toDateString(startOfMonth(subMonths(new Date(), 5))), to: toDateString(endOfMonth(new Date())) }) },
-]
 
 // Group gastos by date label
 function getDateGroup(fecha: string): string {
@@ -85,11 +81,11 @@ export function GastosHistorial() {
   const [tipoOrigenFilter, setTipoOrigenFilter] = useState('all')
   const [categoriaFilter, setCategoriaFilter] = useState('all')
   const [importanciaFilter, setImportanciaFilter] = useState('all')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  const [dateFrom, setDateFrom] = useState(toDateString(startOfMonth(new Date())))
+  const [dateTo, setDateTo] = useState(toDateString(endOfMonth(new Date())))
   const [currentPage, setCurrentPage] = useState(1)
   const [quickAddOpen, setQuickAddOpen] = useState(false)
-  const [filtersOpen, setFiltersOpen] = useState(false)
+
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [groupBy, setGroupBy] = useState<'date' | 'category'>('date')
 
@@ -104,7 +100,7 @@ export function GastosHistorial() {
     if (from) { setDateFrom(from); hasFilter = true }
     if (to) { setDateTo(to); hasFilter = true }
     if (imp) { setImportanciaFilter(imp); hasFilter = true }
-    if (hasFilter) setFiltersOpen(true)
+    // CollapsibleFilters uses defaultOpen={hasActiveFilters} to auto-open when filters come from URL
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: response, isLoading } = useAllGastos()
@@ -213,13 +209,6 @@ export function GastosHistorial() {
     return groups
   }, [paginatedGastos, groupBy])
 
-  const applyPreset = (preset: typeof DATE_PRESETS[number]) => {
-    const { from, to } = preset.getRange()
-    setDateFrom(from)
-    setDateTo(to)
-    setCurrentPage(1)
-    setFiltersOpen(false)
-  }
 
   const clearFilters = () => {
     setSearchTerm('')
@@ -231,8 +220,11 @@ export function GastosHistorial() {
     setCurrentPage(1)
   }
 
-  const hasActiveFilters = searchTerm || tipoOrigenFilter !== 'all' || categoriaFilter !== 'all' || importanciaFilter !== 'all' || dateFrom || dateTo
-  const activeFilterCount = [searchTerm, tipoOrigenFilter !== 'all', categoriaFilter !== 'all', importanciaFilter !== 'all', dateFrom || dateTo].filter(Boolean).length
+  const defaultDateFrom = toDateString(startOfMonth(new Date()))
+  const defaultDateTo = toDateString(endOfMonth(new Date()))
+  const datesChanged = dateFrom !== defaultDateFrom || dateTo !== defaultDateTo
+  const hasActiveFilters = searchTerm || tipoOrigenFilter !== 'all' || categoriaFilter !== 'all' || importanciaFilter !== 'all' || datesChanged
+  const activeFilterCount = [searchTerm, tipoOrigenFilter !== 'all', categoriaFilter !== 'all', importanciaFilter !== 'all', datesChanged].filter(Boolean).length
 
   // ── Summary ──
   const summary = useMemo(() => {
@@ -356,20 +348,6 @@ export function GastosHistorial() {
           {groupBy === 'date' ? <FolderOpen className="h-4 w-4" /> : <CalendarDays className="h-4 w-4" />}
         </Button>
         <Button
-          variant={hasActiveFilters ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFiltersOpen(!filtersOpen)}
-          className="gap-1.5 shrink-0"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          <span className="hidden sm:inline">Filtros</span>
-          {activeFilterCount > 0 && (
-            <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full">
-              {activeFilterCount}
-            </Badge>
-          )}
-        </Button>
-        <Button
           variant="outline"
           size="sm"
           onClick={handleExportCSV}
@@ -381,106 +359,99 @@ export function GastosHistorial() {
         </Button>
       </div>
 
-      {/* Importancia quick-filter chips (always visible) */}
-      {importancias.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          <Button
-            variant={importanciaFilter === 'all' ? 'default' : 'outline'}
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => { setImportanciaFilter('all'); setCurrentPage(1) }}
-          >
-            Todas
-          </Button>
-          {importancias.map((imp) => (
-            <Button
-              key={imp.id}
-              variant={importanciaFilter === imp.id.toString() ? 'default' : 'outline'}
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => { setImportanciaFilter(imp.id.toString()); setCurrentPage(1) }}
-            >
-              {imp.nombre_importancia}
-            </Button>
-          ))}
-        </div>
-      )}
-
       {/* Collapsible filters */}
-      {filtersOpen && (
-        <Card>
-          <CardContent className="pt-4 pb-4 space-y-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <SearchableSelect
-                options={TIPO_ORIGEN_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-                value={tipoOrigenFilter}
-                onValueChange={(v) => { setTipoOrigenFilter(v); setCurrentPage(1) }}
-                placeholder="Tipo de gasto"
-                searchPlaceholder="Buscar tipo..."
-              />
+      <CollapsibleFilters
+        activeFilterCount={activeFilterCount}
+        defaultOpen={!!hasActiveFilters}
+        datePresets={DATE_PRESETS}
+        onPresetSelect={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1) }}
+        currentDateFrom={dateFrom}
+        currentDateTo={dateTo}
+      >
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <SearchableSelect
+              options={TIPO_ORIGEN_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              value={tipoOrigenFilter}
+              onValueChange={(v) => { setTipoOrigenFilter(v); setCurrentPage(1) }}
+              placeholder="Tipo de gasto"
+              searchPlaceholder="Buscar tipo..."
+            />
 
-              <SearchableSelect
-                options={[
-                  { value: 'all', label: 'Todas las categorías' },
-                  ...categorias.map((cat) => ({
-                    value: cat.id.toString(),
-                    label: cat.nombre_categoria,
-                  })),
-                ]}
-                value={categoriaFilter}
-                onValueChange={(v) => { setCategoriaFilter(v); setCurrentPage(1) }}
-                placeholder="Categoría"
-                searchPlaceholder="Buscar categoría..."
-              />
-            </div>
+            <SearchableSelect
+              options={[
+                { value: 'all', label: 'Todas las categorías' },
+                ...categorias.map((cat) => ({
+                  value: cat.id.toString(),
+                  label: cat.nombre_categoria,
+                })),
+              ]}
+              value={categoriaFilter}
+              onValueChange={(v) => { setCategoriaFilter(v); setCurrentPage(1) }}
+              placeholder="Categoría"
+              searchPlaceholder="Buscar categoría..."
+            />
+          </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Desde</label>
-                <Input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1) }}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Hasta</label>
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1) }}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-1.5">
-              {DATE_PRESETS.map((preset) => (
+          {importancias.length > 0 && (
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Importancia</label>
+              <div className="flex flex-wrap gap-1.5">
                 <Button
-                  key={preset.label}
-                  variant="outline"
+                  variant={importanciaFilter === 'all' ? 'default' : 'outline'}
                   size="sm"
                   className="h-7 text-xs"
-                  onClick={() => applyPreset(preset)}
+                  onClick={() => { setImportanciaFilter('all'); setCurrentPage(1) }}
                 >
-                  {preset.label}
+                  Todas
                 </Button>
-              ))}
-            </div>
-
-            {hasActiveFilters && (
-              <div className="flex items-center justify-between pt-2 border-t">
-                <span className="text-sm text-muted-foreground">
-                  {filteredGastos.length} resultados
-                </span>
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
-                  <X className="h-3 w-3 mr-1" />
-                  Limpiar todo
-                </Button>
+                {importancias.map((imp) => (
+                  <Button
+                    key={imp.id}
+                    variant={importanciaFilter === imp.id.toString() ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => { setImportanciaFilter(imp.id.toString()); setCurrentPage(1) }}
+                  >
+                    {imp.nombre_importancia}
+                  </Button>
+                ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Desde</label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1) }}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Hasta</label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1) }}
+              />
+            </div>
+          </div>
+
+          {hasActiveFilters && (
+            <div className="flex items-center justify-between pt-2 border-t">
+              <span className="text-sm text-muted-foreground">
+                {filteredGastos.length} resultados
+              </span>
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
+                <X className="h-3 w-3 mr-1" />
+                Limpiar todo
+              </Button>
+            </div>
+          )}
+        </div>
+      </CollapsibleFilters>
 
       {/* Gastos list grouped by date */}
       {isLoading ? (

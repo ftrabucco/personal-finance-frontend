@@ -2,10 +2,18 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, CreditCard, Power, PowerOff, Play, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, CreditCard, Power, PowerOff, Play, ArrowUpDown, ArrowUp, ArrowDown, X } from 'lucide-react'
 import { isSameMonth } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { CollapsibleFilters } from '@/components/common/CollapsibleFilters'
 import {
   Dialog,
   DialogContent,
@@ -46,6 +54,8 @@ export function DebitosAutomaticosTab() {
   const [editingDebito, setEditingDebito] = useState<DebitoAutomatico | null>(null)
   const [sortField, setSortField] = useState<SortField>('descripcion')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [categoriaFilter, setCategoriaFilter] = useState<string>('todas')
+  const [estadoFilter, setEstadoFilter] = useState<string>('activos')
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -68,6 +78,20 @@ export function DebitosAutomaticosTab() {
 
   const debitos = response?.data || []
 
+  // Extract unique categorias from data
+  const categoriasUnicas = useMemo(() => {
+    const map = new Map<number, string>()
+    debitos.forEach(d => {
+      if (d.categoria?.id && d.categoria?.nombre_categoria) {
+        map.set(d.categoria.id, d.categoria.nombre_categoria)
+      }
+    })
+    return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre))
+  }, [debitos])
+
+  const hasActiveFilters = categoriaFilter !== 'todas' || estadoFilter !== 'activos'
+  const activeFilterCount = [categoriaFilter !== 'todas', estadoFilter !== 'activos'].filter(Boolean).length
+
   const getDiaImpacto = (debito: DebitoAutomatico): { dia: number | null; usaTarjeta: boolean } => {
     if (debito.usa_vencimiento_tarjeta && debito.tarjeta?.tipo === 'credito') {
       return { dia: debito.tarjeta.dia_mes_vencimiento ?? null, usaTarjeta: true }
@@ -85,7 +109,12 @@ export function DebitosAutomaticosTab() {
   }
 
   const sortedDebitos = useMemo(() => {
-    return [...debitos].sort((a, b) => {
+    let filtered = debitos
+    if (estadoFilter === 'activos') filtered = filtered.filter(d => d.activo)
+    if (estadoFilter === 'inactivos') filtered = filtered.filter(d => !d.activo)
+    if (categoriaFilter !== 'todas') filtered = filtered.filter(d => d.categoria_gasto_id === Number(categoriaFilter))
+
+    return [...filtered].sort((a, b) => {
       let comparison = 0
       switch (sortField) {
         case 'descripcion':
@@ -105,7 +134,7 @@ export function DebitosAutomaticosTab() {
       }
       return sortDirection === 'asc' ? comparison : -comparison
     })
-  }, [debitos, sortField, sortDirection])
+  }, [debitos, sortField, sortDirection, categoriaFilter, estadoFilter])
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -193,7 +222,12 @@ export function DebitosAutomaticosTab() {
     }
   }
 
-  const debitosActivos = debitos.filter((d) => d.activo)
+  const handleClearFilters = () => {
+    setCategoriaFilter('todas')
+    setEstadoFilter('activos')
+  }
+
+  const debitosActivos = sortedDebitos.filter((d) => d.activo)
 
   const isProcesadoEsteMes = (ultimaFecha: string | null | undefined): boolean => {
     if (!ultimaFecha) return false
@@ -269,6 +303,45 @@ export function DebitosAutomaticosTab() {
           </CardContent>
         </Card>
       </div>
+
+      <CollapsibleFilters activeFilterCount={activeFilterCount}>
+        <div className="space-y-3">
+          <div className="flex flex-1 flex-wrap gap-2">
+            <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+              <SelectTrigger className="w-full sm:w-[160px] h-9">
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="activos">Activos</SelectItem>
+                <SelectItem value="inactivos">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
+              <SelectTrigger className="w-full sm:w-[180px] h-9">
+                <SelectValue placeholder="Categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas las categorías</SelectItem>
+                {categoriasUnicas.map(c => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {hasActiveFilters && (
+            <div className="flex items-center justify-between pt-2 border-t">
+              <span className="text-sm text-muted-foreground">
+                {sortedDebitos.length} resultados
+              </span>
+              <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-xs">
+                <X className="h-4 w-4 mr-1" />
+                Limpiar todo
+              </Button>
+            </div>
+          )}
+        </div>
+      </CollapsibleFilters>
 
       <Card>
         <CardHeader>

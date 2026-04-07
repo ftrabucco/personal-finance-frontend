@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Pencil, Trash2, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react'
+import { Pencil, Trash2, TrendingUp, ArrowUpDown, ArrowUp, ArrowDown, Search, X } from 'lucide-react'
+import { startOfMonth, endOfMonth } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -21,8 +22,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { IngresoUnicoForm } from '@/components/forms/IngresoUnicoForm'
 import { DualCurrencyDisplay } from '@/components/common/DualCurrencyDisplay'
+import { CollapsibleFilters } from '@/components/common/CollapsibleFilters'
+import { DATE_PRESETS, toDateString } from '@/lib/utils/datePresets'
 import {
   useIngresosUnicos,
   useCreateIngresoUnico,
@@ -45,6 +55,11 @@ export function IngresosUnicosTab() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<SortField>('fecha')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  // Default: current month
+  const [fechaDesde, setFechaDesde] = useState(toDateString(startOfMonth(new Date())))
+  const [fechaHasta, setFechaHasta] = useState(toDateString(endOfMonth(new Date())))
+  const [fuenteFilter, setFuenteFilter] = useState<string>('todas')
+  const [monedaFilter, setMonedaFilter] = useState<string>('todas')
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -65,15 +80,38 @@ export function IngresosUnicosTab() {
 
   const ingresos = response?.data || []
 
+  // Extract unique fuentes from data
+  const fuentesUnicas = useMemo(() => {
+    const map = new Map<number, string>()
+    ingresos.forEach(i => {
+      if (i.fuenteIngreso?.id && i.fuenteIngreso?.nombre) {
+        map.set(i.fuenteIngreso.id, i.fuenteIngreso.nombre)
+      }
+    })
+    return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre))
+  }, [ingresos])
+
+  const hasActiveFilters = fuenteFilter !== 'todas' || monedaFilter !== 'todas' ||
+    fechaDesde !== toDateString(startOfMonth(new Date())) || fechaHasta !== toDateString(endOfMonth(new Date()))
+  const activeFilterCount = [fuenteFilter !== 'todas', monedaFilter !== 'todas',
+    fechaDesde !== toDateString(startOfMonth(new Date())), fechaHasta !== toDateString(endOfMonth(new Date()))].filter(Boolean).length
+
   const filteredIngresos = useMemo(() => {
-    if (!searchQuery.trim()) return ingresos
-    const q = searchQuery.toLowerCase()
-    return ingresos.filter(
-      (i) =>
-        i.descripcion.toLowerCase().includes(q) ||
-        (i.fuenteIngreso?.nombre || '').toLowerCase().includes(q)
-    )
-  }, [ingresos, searchQuery])
+    let filtered = ingresos
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      filtered = filtered.filter(
+        (i) =>
+          i.descripcion.toLowerCase().includes(q) ||
+          (i.fuenteIngreso?.nombre || '').toLowerCase().includes(q)
+      )
+    }
+    if (fuenteFilter !== 'todas') filtered = filtered.filter(i => i.fuente_ingreso_id === Number(fuenteFilter))
+    if (monedaFilter !== 'todas') filtered = filtered.filter(i => i.moneda_origen === monedaFilter)
+    if (fechaDesde) filtered = filtered.filter(i => i.fecha >= fechaDesde)
+    if (fechaHasta) filtered = filtered.filter(i => i.fecha <= fechaHasta)
+    return filtered
+  }, [ingresos, searchQuery, fuenteFilter, monedaFilter, fechaDesde, fechaHasta])
 
   const sortedIngresos = useMemo(() => {
     return [...filteredIngresos].sort((a, b) => {
@@ -163,8 +201,15 @@ export function IngresosUnicosTab() {
     }
   }
 
-  const totalARS = ingresos.reduce((sum, ingreso) => sum + (Number(ingreso.monto_ars) || 0), 0)
-  const totalUSD = ingresos.reduce((sum, ingreso) => sum + (Number(ingreso.monto_usd) || 0), 0)
+  const handleClearFilters = () => {
+    setFuenteFilter('todas')
+    setMonedaFilter('todas')
+    setFechaDesde(toDateString(startOfMonth(new Date())))
+    setFechaHasta(toDateString(endOfMonth(new Date())))
+  }
+
+  const totalARS = filteredIngresos.reduce((sum, ingreso) => sum + (Number(ingreso.monto_ars) || 0), 0)
+  const totalUSD = filteredIngresos.reduce((sum, ingreso) => sum + (Number(ingreso.monto_usd) || 0), 0)
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -199,9 +244,9 @@ export function IngresosUnicosTab() {
             <TrendingUp className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg sm:text-xl md:text-2xl font-bold">{ingresos.length}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{filteredIngresos.length}</div>
             <p className="text-xs text-muted-foreground">
-              {ingresos.length === 1 ? 'ingreso registrado' : 'ingresos registrados'}
+              {filteredIngresos.length === 1 ? 'ingreso encontrado' : 'ingresos encontrados'}
             </p>
           </CardContent>
         </Card>
@@ -216,6 +261,71 @@ export function IngresosUnicosTab() {
           className="pl-9"
         />
       </div>
+
+      <CollapsibleFilters
+        activeFilterCount={activeFilterCount}
+        datePresets={DATE_PRESETS}
+        onPresetSelect={(from, to) => { setFechaDesde(from); setFechaHasta(to) }}
+        currentDateFrom={fechaDesde}
+        currentDateTo={fechaHasta}
+      >
+        <div className="space-y-3">
+          <div className="flex flex-1 flex-wrap gap-2">
+            <Select value={fuenteFilter} onValueChange={setFuenteFilter}>
+              <SelectTrigger className="w-full sm:w-[180px] h-9">
+                <SelectValue placeholder="Fuente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas las fuentes</SelectItem>
+                {fuentesUnicas.map(f => (
+                  <SelectItem key={f.id} value={String(f.id)}>{f.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={monedaFilter} onValueChange={setMonedaFilter}>
+              <SelectTrigger className="w-full sm:w-[140px] h-9">
+                <SelectValue placeholder="Moneda" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas las monedas</SelectItem>
+                <SelectItem value="ARS">ARS</SelectItem>
+                <SelectItem value="USD">USD</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Desde</label>
+              <Input
+                type="date"
+                value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)}
+                className="h-9 w-full sm:w-[160px]"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Hasta</label>
+              <Input
+                type="date"
+                value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)}
+                className="h-9 w-full sm:w-[160px]"
+              />
+            </div>
+          </div>
+          {hasActiveFilters && (
+            <div className="flex items-center justify-between pt-2 border-t">
+              <span className="text-sm text-muted-foreground">
+                {filteredIngresos.length} resultados
+              </span>
+              <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-xs">
+                <X className="h-4 w-4 mr-1" />
+                Limpiar todo
+              </Button>
+            </div>
+          )}
+        </div>
+      </CollapsibleFilters>
 
       <Card>
         <CardHeader>
@@ -232,9 +342,11 @@ export function IngresosUnicosTab() {
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">Cargando ingresos...</div>
-          ) : ingresos.length === 0 ? (
+          ) : filteredIngresos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No hay ingresos registrados. Crea tu primer ingreso único.
+              {hasActiveFilters || searchQuery
+                ? 'No hay ingresos que coincidan con los filtros seleccionados.'
+                : 'No hay ingresos registrados. Crea tu primer ingreso único.'}
             </div>
           ) : (
             <>

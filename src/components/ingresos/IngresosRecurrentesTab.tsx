@@ -2,10 +2,18 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Pencil, Trash2, Repeat, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react'
+import { Pencil, Trash2, Repeat, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { CollapsibleFilters } from '@/components/common/CollapsibleFilters'
 import {
   Dialog,
   DialogContent,
@@ -46,6 +54,8 @@ export function IngresosRecurrentesTab() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<SortField>('descripcion')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [fuenteFilter, setFuenteFilter] = useState<string>('todas')
+  const [estadoFilter, setEstadoFilter] = useState<string>('activos')
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -67,16 +77,36 @@ export function IngresosRecurrentesTab() {
 
   const ingresos = response?.data || []
 
+  // Extract unique fuentes from data
+  const fuentesUnicas = useMemo(() => {
+    const map = new Map<number, string>()
+    ingresos.forEach(i => {
+      if (i.fuenteIngreso?.id && i.fuenteIngreso?.nombre) {
+        map.set(i.fuenteIngreso.id, i.fuenteIngreso.nombre)
+      }
+    })
+    return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre))
+  }, [ingresos])
+
+  const hasActiveFilters = fuenteFilter !== 'todas' || estadoFilter !== 'activos'
+  const activeFilterCount = [fuenteFilter !== 'todas', estadoFilter !== 'activos'].filter(Boolean).length
+
   const filteredIngresos = useMemo(() => {
-    if (!searchQuery.trim()) return ingresos
-    const q = searchQuery.toLowerCase()
-    return ingresos.filter(
-      (i) =>
-        i.descripcion.toLowerCase().includes(q) ||
-        (i.fuenteIngreso?.nombre || '').toLowerCase().includes(q) ||
-        (i.frecuencia?.nombre_frecuencia || '').toLowerCase().includes(q)
-    )
-  }, [ingresos, searchQuery])
+    let filtered = ingresos
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      filtered = filtered.filter(
+        (i) =>
+          i.descripcion.toLowerCase().includes(q) ||
+          (i.fuenteIngreso?.nombre || '').toLowerCase().includes(q) ||
+          (i.frecuencia?.nombre_frecuencia || '').toLowerCase().includes(q)
+      )
+    }
+    if (estadoFilter === 'activos') filtered = filtered.filter(i => i.activo)
+    if (estadoFilter === 'inactivos') filtered = filtered.filter(i => !i.activo)
+    if (fuenteFilter !== 'todas') filtered = filtered.filter(i => i.fuente_ingreso_id === Number(fuenteFilter))
+    return filtered
+  }, [ingresos, searchQuery, estadoFilter, fuenteFilter])
 
   const sortedIngresos = useMemo(() => {
     return [...filteredIngresos].sort((a, b) => {
@@ -172,7 +202,12 @@ export function IngresosRecurrentesTab() {
     }
   }
 
-  const ingresosActivos = ingresos.filter((i) => i.activo)
+  const handleClearFilters = () => {
+    setFuenteFilter('todas')
+    setEstadoFilter('activos')
+  }
+
+  const ingresosActivos = filteredIngresos.filter((i) => i.activo)
 
   const totalARS = ingresosActivos.reduce(
     (sum, ingreso) => sum + (Number(ingreso.monto_ars) || 0),
@@ -246,6 +281,45 @@ export function IngresosRecurrentesTab() {
           className="pl-9"
         />
       </div>
+
+      <CollapsibleFilters activeFilterCount={activeFilterCount}>
+        <div className="space-y-3">
+          <div className="flex flex-1 flex-wrap gap-2">
+            <Select value={estadoFilter} onValueChange={setEstadoFilter}>
+              <SelectTrigger className="w-full sm:w-[160px] h-9">
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="activos">Activos</SelectItem>
+                <SelectItem value="inactivos">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={fuenteFilter} onValueChange={setFuenteFilter}>
+              <SelectTrigger className="w-full sm:w-[180px] h-9">
+                <SelectValue placeholder="Fuente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas las fuentes</SelectItem>
+                {fuentesUnicas.map(f => (
+                  <SelectItem key={f.id} value={String(f.id)}>{f.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {hasActiveFilters && (
+            <div className="flex items-center justify-between pt-2 border-t">
+              <span className="text-sm text-muted-foreground">
+                {filteredIngresos.length} resultados
+              </span>
+              <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-xs">
+                <X className="h-4 w-4 mr-1" />
+                Limpiar todo
+              </Button>
+            </div>
+          )}
+        </div>
+      </CollapsibleFilters>
 
       <Card>
         <CardHeader>

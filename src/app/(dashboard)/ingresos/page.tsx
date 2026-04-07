@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { useModulosContext } from '@/lib/context/ModulosContext'
 import { IngresosUnicosTab } from '@/components/ingresos/IngresosUnicosTab'
 import { IngresosRecurrentesTab } from '@/components/ingresos/IngresosRecurrentesTab'
+import { IngresosHistorial } from '@/components/ingresos/IngresosHistorial'
 import { QuickIngresoDialog } from '@/components/ingresos/QuickIngresoDialog'
 
 function IngresosPageContent() {
@@ -16,7 +17,9 @@ function IngresosPageContent() {
   const [quickAddOpen, setQuickAddOpen] = useState(false)
 
   const tabFromUrl = searchParams.get('tab')
-  const defaultTab = tabFromUrl === 'recurrentes' ? 'recurrentes' : 'unicos'
+  const recurrentesActivo = isModuloActivo('ingresos_recurrentes')
+  const validTabs = ['historial', 'unicos', ...(recurrentesActivo ? ['recurrentes'] : [])]
+  const defaultTab = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : 'historial'
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -38,11 +41,18 @@ function IngresosPageContent() {
 
       <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList>
+          <TabsTrigger value="historial">Historial</TabsTrigger>
           <TabsTrigger value="unicos">Únicos</TabsTrigger>
           {isModuloActivo('ingresos_recurrentes') && (
             <TabsTrigger value="recurrentes">Recurrentes</TabsTrigger>
           )}
         </TabsList>
+
+        <TabsContent value="historial">
+          <Suspense fallback={<div className="text-center py-8">Cargando...</div>}>
+            <IngresosHistorial />
+          </Suspense>
+        </TabsContent>
 
         <TabsContent value="unicos">
           <Suspense fallback={<div className="text-center py-8">Cargando...</div>}>
