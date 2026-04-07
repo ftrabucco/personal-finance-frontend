@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, Wallet, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, Wallet, ArrowUpDown, ArrowUp, ArrowDown, X } from 'lucide-react'
+import { startOfMonth, endOfMonth } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -20,9 +22,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { GastoUnicoForm } from '@/components/forms/GastoUnicoForm'
 import { DualCurrencyDisplay } from '@/components/common/DualCurrencyDisplay'
+import { CollapsibleFilters } from '@/components/common/CollapsibleFilters'
+import { DATE_PRESETS, toDateString } from '@/lib/utils/datePresets'
 import {
   useGastosUnicos,
   useCreateGastoUnico,
@@ -44,6 +55,11 @@ export function GastosUnicosTab() {
   const [editingGasto, setEditingGasto] = useState<GastoUnico | null>(null)
   const [sortField, setSortField] = useState<SortField>('fecha')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  // Default: current month
+  const [fechaDesde, setFechaDesde] = useState(toDateString(startOfMonth(new Date())))
+  const [fechaHasta, setFechaHasta] = useState(toDateString(endOfMonth(new Date())))
+  const [categoriaFilter, setCategoriaFilter] = useState<string>('todas')
+  const [monedaFilter, setMonedaFilter] = useState<string>('todas')
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -64,8 +80,30 @@ export function GastosUnicosTab() {
 
   const gastos = response?.data || []
 
-  const sortedGastos = useMemo(() => {
-    return [...gastos].sort((a, b) => {
+  // Extract unique categorias from data
+  const categoriasUnicas = useMemo(() => {
+    const map = new Map<number, string>()
+    gastos.forEach(g => {
+      if (g.categoria?.id && g.categoria?.nombre_categoria) {
+        map.set(g.categoria.id, g.categoria.nombre_categoria)
+      }
+    })
+    return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre))
+  }, [gastos])
+
+  const hasActiveFilters = categoriaFilter !== 'todas' || monedaFilter !== 'todas' ||
+    fechaDesde !== toDateString(startOfMonth(new Date())) || fechaHasta !== toDateString(endOfMonth(new Date()))
+  const activeFilterCount = [categoriaFilter !== 'todas', monedaFilter !== 'todas',
+    fechaDesde !== toDateString(startOfMonth(new Date())), fechaHasta !== toDateString(endOfMonth(new Date()))].filter(Boolean).length
+
+  const filteredGastos = useMemo(() => {
+    let filtered = gastos
+    if (categoriaFilter !== 'todas') filtered = filtered.filter(g => g.categoria_gasto_id === Number(categoriaFilter))
+    if (monedaFilter !== 'todas') filtered = filtered.filter(g => g.moneda_origen === monedaFilter)
+    if (fechaDesde) filtered = filtered.filter(g => g.fecha >= fechaDesde)
+    if (fechaHasta) filtered = filtered.filter(g => g.fecha <= fechaHasta)
+
+    return [...filtered].sort((a, b) => {
       let comparison = 0
       switch (sortField) {
         case 'fecha':
@@ -83,7 +121,7 @@ export function GastosUnicosTab() {
       }
       return sortDirection === 'asc' ? comparison : -comparison
     })
-  }, [gastos, sortField, sortDirection])
+  }, [gastos, sortField, sortDirection, categoriaFilter, monedaFilter, fechaDesde, fechaHasta])
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -157,8 +195,15 @@ export function GastosUnicosTab() {
     }
   }
 
-  const totalARS = sortedGastos.reduce((sum, gasto) => sum + (Number(gasto.monto_ars) || 0), 0)
-  const totalUSD = sortedGastos.reduce((sum, gasto) => sum + (Number(gasto.monto_usd) || 0), 0)
+  const handleClearFilters = () => {
+    setCategoriaFilter('todas')
+    setMonedaFilter('todas')
+    setFechaDesde(toDateString(startOfMonth(new Date())))
+    setFechaHasta(toDateString(endOfMonth(new Date())))
+  }
+
+  const totalARS = filteredGastos.reduce((sum, gasto) => sum + (Number(gasto.monto_ars) || 0), 0)
+  const totalUSD = filteredGastos.reduce((sum, gasto) => sum + (Number(gasto.monto_usd) || 0), 0)
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -185,7 +230,7 @@ export function GastosUnicosTab() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Suma de todos los gastos
+              Suma de gastos filtrados
             </p>
           </CardContent>
         </Card>
@@ -196,13 +241,78 @@ export function GastosUnicosTab() {
             <Wallet className="h-4 w-4 text-muted-foreground shrink-0" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg sm:text-xl md:text-2xl font-bold">{gastos.length}</div>
+            <div className="text-lg sm:text-xl md:text-2xl font-bold">{filteredGastos.length}</div>
             <p className="text-xs text-muted-foreground">
-              {gastos.length === 1 ? 'gasto registrado' : 'gastos registrados'}
+              {filteredGastos.length === 1 ? 'gasto encontrado' : 'gastos encontrados'}
             </p>
           </CardContent>
         </Card>
       </div>
+
+      <CollapsibleFilters
+        activeFilterCount={activeFilterCount}
+        datePresets={DATE_PRESETS}
+        onPresetSelect={(from, to) => { setFechaDesde(from); setFechaHasta(to) }}
+        currentDateFrom={fechaDesde}
+        currentDateTo={fechaHasta}
+      >
+        <div className="space-y-3">
+          <div className="flex flex-1 flex-wrap gap-2">
+            <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
+              <SelectTrigger className="w-full sm:w-[180px] h-9">
+                <SelectValue placeholder="Categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas las categorías</SelectItem>
+                {categoriasUnicas.map(c => (
+                  <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={monedaFilter} onValueChange={setMonedaFilter}>
+              <SelectTrigger className="w-full sm:w-[140px] h-9">
+                <SelectValue placeholder="Moneda" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas las monedas</SelectItem>
+                <SelectItem value="ARS">ARS</SelectItem>
+                <SelectItem value="USD">USD</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Desde</label>
+              <Input
+                type="date"
+                value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)}
+                className="h-9 w-full sm:w-[160px]"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Hasta</label>
+              <Input
+                type="date"
+                value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)}
+                className="h-9 w-full sm:w-[160px]"
+              />
+            </div>
+          </div>
+          {hasActiveFilters && (
+            <div className="flex items-center justify-between pt-2 border-t">
+              <span className="text-sm text-muted-foreground">
+                {filteredGastos.length} resultados
+              </span>
+              <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-xs">
+                <X className="h-4 w-4 mr-1" />
+                Limpiar todo
+              </Button>
+            </div>
+          )}
+        </div>
+      </CollapsibleFilters>
 
       <Card>
         <CardHeader>
@@ -214,15 +324,17 @@ export function GastosUnicosTab() {
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">Cargando gastos...</div>
-          ) : gastos.length === 0 ? (
+          ) : filteredGastos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No hay gastos registrados. Crea tu primer gasto unico.
+              {hasActiveFilters
+                ? 'No hay gastos que coincidan con los filtros seleccionados.'
+                : 'No hay gastos registrados. Crea tu primer gasto unico.'}
             </div>
           ) : (
             <>
               {/* Mobile: Cards */}
               <div className="space-y-3 md:hidden">
-                {sortedGastos.map((gasto) => (
+                {filteredGastos.map((gasto) => (
                   <div key={gasto.id} className="rounded-lg border p-3">
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <Badge variant={gasto.procesado ? 'default' : 'secondary'} className="text-xs shrink-0">
@@ -285,7 +397,7 @@ export function GastosUnicosTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedGastos.map((gasto) => (
+                    {filteredGastos.map((gasto) => (
                       <TableRow key={gasto.id}>
                         <TableCell>
                           {formatDate(gasto.fecha)}
