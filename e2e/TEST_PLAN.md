@@ -54,12 +54,23 @@
 
 ---
 
+### 4. Dashboard vs Gastos Historial - Consistencia (`e2e/dashboard-gastos-consistency.spec.ts`)
+
+| # | Caso de Prueba | Tipo | Descripcion | Criterio de Aceptacion |
+|---|---|---|---|---|
+| CONS-01 | Monthly total matches between dashboard and historial | Consistencia | Compara el total de "Gastos del Mes" del dashboard con el total del historial (default "Este mes") | Ambos montos son idénticos |
+| CONS-02 | Dashboard shows correct date-filtered total | Validacion | Verifica formato del monto en la card "Gastos del Mes" | Formato válido de moneda ($ X.XXX,XX) |
+| CONS-03 | Historial "Este mes" preset shows same period | Smoke | Verifica que el historial con preset "Este mes" carga datos | Muestra datos o estado vacío |
+| CONS-04 | Changing date range shows different total | Funcional | Cambia a "Últimos 3 meses" y verifica que el total cambia | Total válido en formato moneda |
+
+---
+
 ## Cobertura por Modulo
 
 | Modulo | Tests | Flujos cubiertos | Pendientes |
 |---|---|---|---|
 | **Auth** | 6 | Login, validacion, credenciales invalidas, redirect, registro | Logout, cambio de password, sesion expirada |
-| **Dashboard** | 2 | Carga, procesar pendientes | Click en charts, navegacion a secciones |
+| **Dashboard** | 2 + 4 | Carga, procesar pendientes, consistencia con historial | Click en charts, navegacion a secciones |
 | **Gastos** | 5 | Navegacion, CRUD (crear/eliminar), busqueda, carga historial | Editar gasto, filtros por categoria/importancia, tabs recurrentes/debitos/cuotas, paginacion |
 | **Ingresos** | 0 | - | CRUD unicos, CRUD recurrentes, busqueda |
 | **Tarjetas** | 0 | - | CRUD tarjetas, asociar gastos |

@@ -81,20 +81,25 @@ export default function DashboardPage() {
   const startOfLastMonth = startOfMonth(subMonths(now, 1))
   const endOfLastMonth = endOfMonth(subMonths(now, 1))
 
+  const startCurrentStr = format(startOfCurrentMonth, 'yyyy-MM-dd')
+  const endCurrentStr = format(endOfCurrentMonth, 'yyyy-MM-dd')
+  const startLastStr = format(startOfLastMonth, 'yyyy-MM-dd')
+  const endLastStr = format(endOfLastMonth, 'yyyy-MM-dd')
+
   const gastosDelMes = useMemo(() =>
     gastos.filter((gasto) => {
-      const fecha = new Date(gasto.fecha)
-      return fecha >= startOfCurrentMonth && fecha <= endOfCurrentMonth
+      const fechaStr = gasto.fecha.slice(0, 10)
+      return fechaStr >= startCurrentStr && fechaStr <= endCurrentStr
     }),
-    [gastos, startOfCurrentMonth, endOfCurrentMonth]
+    [gastos, startCurrentStr, endCurrentStr]
   )
 
   const gastosDelMesAnterior = useMemo(() =>
     gastos.filter((gasto) => {
-      const fecha = new Date(gasto.fecha)
-      return fecha >= startOfLastMonth && fecha <= endOfLastMonth
+      const fechaStr = gasto.fecha.slice(0, 10)
+      return fechaStr >= startLastStr && fechaStr <= endLastStr
     }),
-    [gastos, startOfLastMonth, endOfLastMonth]
+    [gastos, startLastStr, endLastStr]
   )
 
   const totalGastosDelMes = gastosDelMes.reduce(
@@ -120,10 +125,10 @@ export default function DashboardPage() {
   // Calcular ingresos del mes actual
   const ingresosUnicosDelMes = useMemo(() =>
     ingresosUnicos.filter((ingreso) => {
-      const fecha = new Date(ingreso.fecha)
-      return fecha >= startOfCurrentMonth && fecha <= endOfCurrentMonth
+      const fechaStr = ingreso.fecha.slice(0, 10)
+      return fechaStr >= startCurrentStr && fechaStr <= endCurrentStr
     }),
-    [ingresosUnicos, startOfCurrentMonth, endOfCurrentMonth]
+    [ingresosUnicos, startCurrentStr, endCurrentStr]
   )
 
   const totalIngresosUnicosDelMes = ingresosUnicosDelMes.reduce(
@@ -141,16 +146,16 @@ export default function DashboardPage() {
     ingresosRecurrentes.filter((i) => {
       if (!i.activo) return false
       if (i.fecha_inicio) {
-        const fechaInicio = new Date(i.fecha_inicio)
-        if (fechaInicio > endOfCurrentMonth) return false
+        const fechaInicioStr = i.fecha_inicio.slice(0, 10)
+        if (fechaInicioStr > endCurrentStr) return false
       }
       if (i.fecha_fin) {
-        const fechaFin = new Date(i.fecha_fin)
-        if (fechaFin < startOfCurrentMonth) return false
+        const fechaFinStr = i.fecha_fin.slice(0, 10)
+        if (fechaFinStr < startCurrentStr) return false
       }
       return true
     }),
-    [ingresosRecurrentes, startOfCurrentMonth, endOfCurrentMonth]
+    [ingresosRecurrentes, startCurrentStr, endCurrentStr]
   )
 
   const totalIngresosRecurrentesMensual = ingresosRecurrentesActivos.reduce(
@@ -203,53 +208,44 @@ export default function DashboardPage() {
   // Datos para el gráfico de barras (últimos 4 meses) - Gastos vs Ingresos
   const balancePorMes = useMemo(() => {
     const meses = []
-    for (let i = 3; i >= 0; i--) {
-      const mesDate = subMonths(now, i)
-      const inicio = startOfMonth(mesDate)
-      const fin = endOfMonth(mesDate)
+    for (let monthsAgo = 3; monthsAgo >= 0; monthsAgo--) {
+      const mesDate = subMonths(now, monthsAgo)
+      const inicioStr = format(startOfMonth(mesDate), 'yyyy-MM-dd')
+      const finStr = format(endOfMonth(mesDate), 'yyyy-MM-dd')
 
       const totalGastos = gastos
         .filter((g) => {
-          const fecha = new Date(g.fecha)
-          return fecha >= inicio && fecha <= fin
+          const fechaStr = g.fecha.slice(0, 10)
+          return fechaStr >= inicioStr && fechaStr <= finStr
         })
         .reduce((sum, g) => sum + parseFloat(g.monto_ars), 0)
 
       const totalIngresosU = ingresosUnicos
-        .filter((i) => {
-          const fecha = new Date(i.fecha)
-          return fecha >= inicio && fecha <= fin
+        .filter((ingreso) => {
+          const fechaStr = ingreso.fecha.slice(0, 10)
+          return fechaStr >= inicioStr && fechaStr <= finStr
         })
-        .reduce((sum, i) => sum + parseFloat(String(i.monto_ars || 0)), 0)
+        .reduce((sum, ingreso) => sum + parseFloat(String(ingreso.monto_ars || 0)), 0)
 
-      // Para ingresos recurrentes, verificar fecha_inicio y fecha_fin para cada mes
       const totalIngresosR = ingresosRecurrentes
-        .filter((i) => {
-          if (!i.activo) return false
-          // Verificar que fecha_inicio sea anterior o igual al fin del mes analizado
-          if (i.fecha_inicio) {
-            const fechaInicio = new Date(i.fecha_inicio)
-            if (fechaInicio > fin) return false
-          }
-          // Verificar que fecha_fin (si existe) sea posterior o igual al inicio del mes
-          if (i.fecha_fin) {
-            const fechaFin = new Date(i.fecha_fin)
-            if (fechaFin < inicio) return false
-          }
+        .filter((rec) => {
+          if (!rec.activo) return false
+          if (rec.fecha_inicio && rec.fecha_inicio.slice(0, 10) > finStr) return false
+          if (rec.fecha_fin && rec.fecha_fin.slice(0, 10) < inicioStr) return false
           return true
         })
-        .reduce((sum, i) => sum + parseFloat(String(i.monto_ars || 0)), 0)
+        .reduce((sum, rec) => sum + parseFloat(String(rec.monto_ars || 0)), 0)
 
       meses.push({
         mes: format(mesDate, 'MMM', { locale: es }),
         gastos: totalGastos,
         ingresos: totalIngresosU + totalIngresosR,
-        dateFrom: format(inicio, 'yyyy-MM-dd'),
-        dateTo: format(fin, 'yyyy-MM-dd'),
+        dateFrom: inicioStr,
+        dateTo: finStr,
       })
     }
     return meses
-  }, [gastos, ingresosUnicos, ingresosRecurrentes, now])
+  }, [gastos, ingresosUnicos, ingresosRecurrentes, startCurrentStr])
 
   // Desglose de gastos del mes por tipo_origen (datos reales procesados)
   const gastosPorTipo = useMemo(() => {
