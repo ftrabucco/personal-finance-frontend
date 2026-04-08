@@ -1,17 +1,5 @@
 import { test, expect } from '@playwright/test'
-
-// Helper: login and navigate
-async function loginAndGoTo(page: import('@playwright/test').Page, path = '/') {
-  await page.goto('/login')
-  await page.getByLabel('Email').fill(process.env.E2E_USER_EMAIL || 'email@gmail.com')
-  await page.getByLabel('Contraseña').fill(process.env.E2E_USER_PASSWORD || 'Test123')
-  await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
-  await expect(page).toHaveURL('/', { timeout: 15000 })
-  if (path !== '/') {
-    await page.goto(path)
-    await page.waitForLoadState('networkidle')
-  }
-}
+import { loginAndGoTo } from './helpers'
 
 test.describe('Dashboard', () => {
   test('loads and shows main sections', async ({ page }) => {
