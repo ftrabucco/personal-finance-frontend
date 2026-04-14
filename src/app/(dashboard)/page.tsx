@@ -25,9 +25,11 @@ import {
   Calendar,
   Zap,
   ShoppingCart,
+  Wallet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAllGastos } from '@/lib/hooks/useGastos'
+import { useBalanceEvolucion } from '@/lib/hooks/useBalance'
 import { useCategorias } from '@/lib/hooks/useCatalogos'
 import { useProcesarTodosPendientes } from '@/lib/hooks/useProcesamiento'
 import { useSaludFinanciera, useProyeccion } from '@/lib/hooks/useAnalisis'
@@ -63,6 +65,12 @@ export default function DashboardPage() {
   const { data: ingresosUnicosResponse } = useIngresosUnicos()
   const { data: ingresosRecurrentesResponse } = useIngresosRecurrentes()
   const { data: categoriasResponse } = useCategorias()
+
+  // Balance acumulado - últimos 6 meses
+  const balanceDesde = format(subMonths(new Date(), 5), 'yyyy-MM')
+  const balanceHasta = format(new Date(), 'yyyy-MM')
+  const { data: balanceResponse } = useBalanceEvolucion(balanceDesde, balanceHasta)
+  const balanceData = balanceResponse?.data
 
   const categorias = categoriasResponse?.data || []
 
@@ -400,6 +408,52 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* 3b. Balance Acumulado Card */}
+      {balanceData && (
+        <Card className="overflow-hidden border-l-4 border-l-blue-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Balance Acumulado
+            </CardTitle>
+            <Wallet className="h-4 w-4 text-blue-500 shrink-0" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+              <div className="space-y-1">
+                <div
+                  className={`text-2xl md:text-3xl font-bold ${balanceData.balance_actual_ars >= 0 ? 'text-blue-600' : 'text-red-600'}`}
+                  title={formatCurrency(Math.abs(balanceData.balance_actual_ars))}
+                >
+                  {balanceData.balance_actual_ars >= 0 ? '' : '-'}{formatCurrencyCompact(Math.abs(balanceData.balance_actual_ars))}
+                </div>
+                {balanceData.balance_actual_usd !== 0 && (
+                  <div className={`text-sm ${balanceData.balance_actual_usd >= 0 ? 'text-muted-foreground' : 'text-red-600/70'}`}>
+                    {balanceData.balance_actual_usd >= 0 ? '' : '-'}{formatCurrencyCompact(Math.abs(balanceData.balance_actual_usd), 'USD')}
+                  </div>
+                )}
+              </div>
+              {balanceData.meses.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  {(() => {
+                    const lastMonth = balanceData.meses[balanceData.meses.length - 1]
+                    return (
+                      <span className={lastMonth.saldo_ars >= 0 ? 'text-green-600' : 'text-red-600'}>
+                        {lastMonth.saldo_ars >= 0 ? '+' : ''}{formatCurrencyCompact(lastMonth.saldo_ars)} este mes
+                      </span>
+                    )
+                  })()}
+                </div>
+              )}
+            </div>
+            {balanceData.balance_inicial > 0 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Balance inicial: {formatCurrencyCompact(balanceData.balance_inicial)}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* 4. Desglose de Gastos del Mes */}
       {gastosDelMes.length > 0 && (
       <Card>
@@ -725,7 +779,55 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* 7. Recent Activity - Gastos Recientes (full width) */}
+      {/* 7. Evolución Mensual - Tabla detallada */}
+      {balanceData && balanceData.meses.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Evolución Mensual</CardTitle>
+            <CardDescription>
+              Detalle de ingresos, gastos y balance mes a mes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-muted-foreground">
+                    <th className="text-left py-2 pr-4 font-medium">Mes</th>
+                    <th className="text-right py-2 px-4 font-medium">Ingresos</th>
+                    <th className="text-right py-2 px-4 font-medium">Gastos</th>
+                    <th className="text-right py-2 px-4 font-medium">Saldo</th>
+                    <th className="text-right py-2 pl-4 font-medium">Acumulado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...balanceData.meses].reverse().map((mes) => (
+                    <tr key={mes.mes} className="border-b last:border-0">
+                      <td className="py-2 pr-4 font-medium capitalize">
+                        {format(new Date(`${mes.mes}-01`), 'MMM yyyy', { locale: es })}
+                      </td>
+                      <td className="text-right py-2 px-4 text-green-600">
+                        {formatCurrencyCompact(mes.ingresos_ars)}
+                      </td>
+                      <td className="text-right py-2 px-4 text-red-600">
+                        {formatCurrencyCompact(mes.gastos_ars)}
+                      </td>
+                      <td className={`text-right py-2 px-4 font-medium ${mes.saldo_ars >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {mes.saldo_ars >= 0 ? '+' : ''}{formatCurrencyCompact(mes.saldo_ars)}
+                      </td>
+                      <td className={`text-right py-2 pl-4 font-semibold ${mes.acumulado_ars >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                        {formatCurrencyCompact(mes.acumulado_ars)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 8. Recent Activity - Gastos Recientes (full width) */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Gastos Recientes</CardTitle>

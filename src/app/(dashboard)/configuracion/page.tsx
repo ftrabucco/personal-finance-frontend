@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, Pencil, Trash2, Tag, Wallet, Lock, Eye, EyeOff, LayoutGrid } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, Pencil, Trash2, Tag, Wallet, Lock, Eye, EyeOff, LayoutGrid, Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -39,7 +39,8 @@ import {
   useDeleteFuenteIngreso,
   useToggleFuenteIngresoActivo,
 } from '@/lib/hooks/useFuentesIngresoEditables'
-import { useModulosDisponibles, useToggleModulo, usePreferencias } from '@/lib/hooks/usePreferencias'
+import { useModulosDisponibles, useToggleModulo, usePreferencias, useUpdatePreferencias } from '@/lib/hooks/usePreferencias'
+import { formatCurrency } from '@/lib/utils/formatters'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog'
 import type { Categoria, FuenteIngreso } from '@/types'
@@ -58,7 +59,7 @@ interface FuenteFormData {
 }
 
 export default function ConfiguracionPage() {
-  const [activeTab, setActiveTab] = useState('modulos')
+  const [activeTab, setActiveTab] = useState('general')
   const [showInactive, setShowInactive] = useState(true)
 
   // Categorias state
@@ -98,6 +99,17 @@ export default function ConfiguracionPage() {
   const { data: modulosDisponibles, isLoading: loadingModulos } = useModulosDisponibles()
   const { data: preferencias } = usePreferencias()
   const toggleModuloMutation = useToggleModulo()
+  const updatePreferenciasMutation = useUpdatePreferencias()
+
+  // Balance inicial
+  const [balanceInicialInput, setBalanceInicialInput] = useState('')
+  const [balanceInicialSaved, setBalanceInicialSaved] = useState(false)
+
+  useEffect(() => {
+    if (preferencias?.balance_inicial !== undefined) {
+      setBalanceInicialInput(String(preferencias.balance_inicial ?? ''))
+    }
+  }, [preferencias?.balance_inicial])
 
   // Categorias handlers
   const handleCreateCategoria = () => {
@@ -272,6 +284,24 @@ export default function ConfiguracionPage() {
     }
   }
 
+  // Balance inicial handler
+  const handleSaveBalanceInicial = async () => {
+    const valor = parseFloat(balanceInicialInput)
+    if (isNaN(valor) || valor < 0) {
+      toast.error('El balance inicial debe ser un número positivo')
+      return
+    }
+    try {
+      await updatePreferenciasMutation.mutateAsync({ balance_inicial: valor })
+      setBalanceInicialSaved(true)
+      toast.success('Balance inicial actualizado')
+      setTimeout(() => setBalanceInicialSaved(false), 2000)
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error al guardar'
+      toast.error(errorMessage)
+    }
+  }
+
   // Check if a module is active
   const isModuloActivo = (modulo: string): boolean => {
     if (!modulosDisponibles || !preferencias) return true
@@ -301,7 +331,11 @@ export default function ConfiguracionPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="general" className="flex items-center gap-2">
+            <Settings2 className="h-4 w-4" />
+            General
+          </TabsTrigger>
           <TabsTrigger value="modulos" className="flex items-center gap-2">
             <LayoutGrid className="h-4 w-4" />
             Modulos
@@ -315,6 +349,67 @@ export default function ConfiguracionPage() {
             Fuentes
           </TabsTrigger>
         </TabsList>
+
+        {/* General Tab */}
+        <TabsContent value="general" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5" />
+                Ajustes Generales
+              </CardTitle>
+              <CardDescription>
+                Configura los valores base de tu perfil financiero
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <Label htmlFor="balance_inicial" className="text-base font-medium">
+                    Balance Inicial
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    El monto que tenias antes de empezar a usar la app. Se usa como punto de partida para calcular tu balance acumulado.
+                  </p>
+                  <div className="flex gap-3 items-end">
+                    <div className="flex-1 max-w-xs">
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <Input
+                          id="balance_inicial"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={balanceInicialInput}
+                          onChange={(e) => setBalanceInicialInput(e.target.value)}
+                          className="pl-7"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handleSaveBalanceInicial}
+                      disabled={updatePreferenciasMutation.isPending}
+                      variant={balanceInicialSaved ? 'outline' : 'default'}
+                      size="default"
+                    >
+                      {updatePreferenciasMutation.isPending
+                        ? 'Guardando...'
+                        : balanceInicialSaved
+                          ? 'Guardado'
+                          : 'Guardar'}
+                    </Button>
+                  </div>
+                  {preferencias?.balance_inicial != null && Number(preferencias.balance_inicial) > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Valor actual: {formatCurrency(Number(preferencias.balance_inicial))}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Modulos Tab */}
         <TabsContent value="modulos" className="mt-4">

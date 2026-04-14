@@ -105,6 +105,26 @@ export interface ProyeccionResponse {
   resumen: ProyeccionResumen
 }
 
+// Balance / Evolución Mensual
+export interface MesBalance {
+  mes: string // YYYY-MM
+  ingresos_ars: number
+  gastos_ars: number
+  saldo_ars: number
+  acumulado_ars: number
+  ingresos_usd: number
+  gastos_usd: number
+  saldo_usd: number
+  acumulado_usd: number
+}
+
+export interface BalanceEvolucionResponse {
+  balance_inicial: number
+  meses: MesBalance[]
+  balance_actual_ars: number
+  balance_actual_usd: number
+}
+
 // Salud Financiera
 export interface DesgloseMetrica {
   valor: number

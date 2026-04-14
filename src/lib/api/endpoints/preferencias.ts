@@ -4,6 +4,7 @@ import type { StandardResponse, PreferenciasUsuario, ModulosDisponibles } from '
 export interface UpdatePreferenciasPayload {
   modulos_activos?: string[]
   tema?: 'light' | 'dark' | 'system'
+  balance_inicial?: number
 }
 
 export interface ToggleModuloPayload {

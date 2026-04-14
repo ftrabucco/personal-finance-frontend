@@ -275,6 +275,7 @@ export interface PreferenciasUsuario {
   usuario_id: number
   modulos_activos: string[]
   tema: 'light' | 'dark' | 'system'
+  balance_inicial: number
   created_at?: string
   updated_at?: string
 }
