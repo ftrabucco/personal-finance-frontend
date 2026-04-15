@@ -705,8 +705,8 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {topCategorias.length > 0 ? (
-              <div className="flex flex-col lg:flex-row items-center gap-4">
-                <div className="h-[200px] w-full lg:w-1/2">
+              <div className="flex flex-col lg:flex-row items-center gap-4 min-w-0">
+                <div className="h-[200px] w-full lg:w-1/2 shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -746,7 +746,7 @@ export default function DashboardPage() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="w-full lg:w-1/2 space-y-2 min-w-0">
+                <div className="w-full lg:w-1/2 space-y-2 min-w-0 overflow-hidden">
                   {topCategorias.slice(0, 5).map((cat, index) => {
                     const catObj = categorias.find((c: { id: number; nombre_categoria: string }) => c.nombre_categoria === cat.name)
                     return (
