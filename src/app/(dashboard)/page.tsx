@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useAuth } from '@/lib/auth/authContext'
 import { useModulosContext } from '@/lib/context/ModulosContext'
 import { ModulosDiscoveryBanner } from '@/components/ModulosDiscoveryBanner'
@@ -14,6 +14,13 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import {
   Repeat,
   Receipt,
   RefreshCw,
@@ -26,15 +33,18 @@ import {
   Zap,
   ShoppingCart,
   Wallet,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAllGastos } from '@/lib/hooks/useGastos'
 import { useBalanceEvolucion } from '@/lib/hooks/useBalance'
+import { useTipoCambioActual } from '@/lib/hooks/useTipoCambio'
 import { useCategorias } from '@/lib/hooks/useCatalogos'
 import { useProcesarTodosPendientes } from '@/lib/hooks/useProcesamiento'
 import { useSaludFinanciera, useProyeccion } from '@/lib/hooks/useAnalisis'
 import { useIngresosUnicos } from '@/lib/hooks/useIngresosUnicos'
 import { useIngresosRecurrentes } from '@/lib/hooks/useIngresosRecurrentes'
+import { usePreferencias, useUpdatePreferencias } from '@/lib/hooks/usePreferencias'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns'
@@ -50,6 +60,8 @@ import {
   YAxis,
   Tooltip,
 } from 'recharts'
+import type { DashboardSection } from '@/types'
+import { DASHBOARD_SECTIONS_DEFAULT, DASHBOARD_SECTION_LABELS } from '@/types'
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d', '#ffc658', '#ff7300']
 
@@ -66,11 +78,25 @@ export default function DashboardPage() {
   const { data: ingresosRecurrentesResponse } = useIngresosRecurrentes()
   const { data: categoriasResponse } = useCategorias()
 
+  // Dashboard personalization
+  const { data: preferencias } = usePreferencias()
+  const updatePreferencias = useUpdatePreferencias()
+  const activeSections: DashboardSection[] = preferencias?.dashboard_sections ?? DASHBOARD_SECTIONS_DEFAULT
+  const isSectionVisible = (section: DashboardSection) => activeSections.includes(section)
+  const toggleSection = (section: DashboardSection) => {
+    const next = activeSections.includes(section)
+      ? activeSections.filter(s => s !== section)
+      : [...activeSections, section]
+    updatePreferencias.mutate({ dashboard_sections: next })
+  }
+
   // Balance acumulado - últimos 6 meses
   const balanceDesde = format(subMonths(new Date(), 5), 'yyyy-MM')
   const balanceHasta = format(new Date(), 'yyyy-MM')
   const { data: balanceResponse } = useBalanceEvolucion(balanceDesde, balanceHasta)
   const balanceData = balanceResponse?.data
+  const { data: tipoCambioResponse } = useTipoCambioActual()
+  const tcVenta = tipoCambioResponse?.data?.valor_venta_usd_ars ?? null
 
   const categorias = categoriasResponse?.data || []
 
@@ -290,16 +316,49 @@ export default function DashboardPage() {
             Aquí está el resumen de tus finanzas personales
           </p>
         </div>
-        <Button
-          onClick={handleProcesarPendientes}
-          disabled={procesarPendientes.isPending}
-          variant="outline"
-          size="sm"
-          className="gap-2 w-full sm:w-auto"
-        >
-          <RefreshCw className={`h-4 w-4 ${procesarPendientes.isPending ? 'animate-spin' : ''}`} />
-          {procesarPendientes.isPending ? 'Procesando...' : 'Procesar Pendientes'}
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 flex-1 sm:flex-none">
+                <SlidersHorizontal className="h-4 w-4" />
+                Personalizar
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <div className="space-y-4 pt-2">
+                <div>
+                  <h2 className="text-lg font-semibold">Personalizar Dashboard</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Elegí qué secciones querés ver en tu dashboard.
+                  </p>
+                </div>
+                <div className="space-y-4 pt-2">
+                  {(Object.entries(DASHBOARD_SECTION_LABELS) as [DashboardSection, string][]).map(([key, label]) => (
+                    <div key={key} className="flex items-center justify-between">
+                      <Label htmlFor={`section-${key}`} className="cursor-pointer">{label}</Label>
+                      <Switch
+                        id={`section-${key}`}
+                        checked={isSectionVisible(key)}
+                        onCheckedChange={() => toggleSection(key)}
+                        disabled={updatePreferencias.isPending}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+          <Button
+            onClick={handleProcesarPendientes}
+            disabled={procesarPendientes.isPending}
+            variant="outline"
+            size="sm"
+            className="gap-2 flex-1 sm:flex-none"
+          >
+            <RefreshCw className={`h-4 w-4 ${procesarPendientes.isPending ? 'animate-spin' : ''}`} />
+            {procesarPendientes.isPending ? 'Procesando...' : 'Procesar Pendientes'}
+          </Button>
+        </div>
       </div>
 
       {/* 2. Discovery Banner */}
@@ -388,28 +447,30 @@ export default function DashboardPage() {
         </Card>
 
         {/* Tasa de Ahorro */}
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Tasa de Ahorro
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-lg sm:text-xl md:text-2xl font-bold ${tasaAhorro >= 20 ? 'text-green-600' : tasaAhorro >= 0 ? 'text-yellow-600' : 'text-red-600'}`}
-            >
-              {tasaAhorro.toFixed(1)}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {tasaAhorro >= 20 ? 'Excelente' : tasaAhorro >= 10 ? 'Bueno' : tasaAhorro >= 0 ? 'Ajustado' : 'Déficit'}
-            </p>
-          </CardContent>
-        </Card>
+        {isSectionVisible('tasa_ahorro') && (
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Tasa de Ahorro
+              </CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground shrink-0" />
+            </CardHeader>
+            <CardContent>
+              <div
+                className={`text-lg sm:text-xl md:text-2xl font-bold ${tasaAhorro >= 20 ? 'text-green-600' : tasaAhorro >= 0 ? 'text-yellow-600' : 'text-red-600'}`}
+              >
+                {tasaAhorro.toFixed(1)}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {tasaAhorro >= 20 ? 'Excelente' : tasaAhorro >= 10 ? 'Bueno' : tasaAhorro >= 0 ? 'Ajustado' : 'Déficit'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* 3b. Balance Acumulado Card */}
-      {balanceData && (
+      {balanceData && isSectionVisible('balance_acumulado') && (
         <Card className="overflow-hidden border-l-4 border-l-blue-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -426,9 +487,9 @@ export default function DashboardPage() {
                 >
                   {balanceData.balance_actual_ars >= 0 ? '' : '-'}{formatCurrencyCompact(Math.abs(balanceData.balance_actual_ars))}
                 </div>
-                {balanceData.balance_actual_usd !== 0 && (
-                  <div className={`text-sm ${balanceData.balance_actual_usd >= 0 ? 'text-muted-foreground' : 'text-red-600/70'}`}>
-                    {balanceData.balance_actual_usd >= 0 ? '' : '-'}{formatCurrencyCompact(Math.abs(balanceData.balance_actual_usd), 'USD')}
+                {tcVenta && (
+                  <div className="text-sm text-muted-foreground">
+                    {formatCurrencyCompact(balanceData.balance_actual_ars / tcVenta, 'USD')}
                   </div>
                 )}
               </div>
@@ -455,7 +516,7 @@ export default function DashboardPage() {
       )}
 
       {/* 4. Desglose de Gastos del Mes */}
-      {gastosDelMes.length > 0 && (
+      {gastosDelMes.length > 0 && isSectionVisible('desglose_mes') && (
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Desglose del Mes</CardTitle>
@@ -602,7 +663,7 @@ export default function DashboardPage() {
         )}
 
         {/* Proyección Widget */}
-        {isModuloActivo('proyecciones') && (
+        {isModuloActivo('proyecciones') && isSectionVisible('proyeccion') && (
         <Card
           className="cursor-pointer hover:bg-accent/50 transition-colors"
           onClick={() => router.push('/proyecciones')}
@@ -632,9 +693,10 @@ export default function DashboardPage() {
       )}
 
       {/* 6. Charts Row */}
+      {(isSectionVisible('gastos_categoria') || isSectionVisible('ingresos_vs_gastos')) && (
       <div className="grid gap-3 md:gap-4 md:grid-cols-2">
         {/* Gastos por Categoría - Pie Chart */}
-        <Card>
+        {isSectionVisible('gastos_categoria') && <Card>
           <CardHeader>
             <CardTitle className="text-lg">Gastos por Categoría</CardTitle>
             <CardDescription>
@@ -643,8 +705,8 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {topCategorias.length > 0 ? (
-              <div className="flex flex-col lg:flex-row items-center gap-4">
-                <div className="h-[200px] w-full lg:w-1/2">
+              <div className="flex flex-col lg:flex-row items-center gap-4 min-w-0">
+                <div className="h-[200px] w-full lg:w-1/2 shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -684,23 +746,23 @@ export default function DashboardPage() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="w-full lg:w-1/2 space-y-2">
+                <div className="w-full lg:w-1/2 space-y-2 min-w-0 overflow-hidden">
                   {topCategorias.slice(0, 5).map((cat, index) => {
                     const catObj = categorias.find((c: { id: number; nombre_categoria: string }) => c.nombre_categoria === cat.name)
                     return (
                       <div
                         key={cat.name}
-                        className={cn("flex items-center justify-between text-sm", catObj && "cursor-pointer hover:bg-accent/50 rounded px-1 -mx-1 py-0.5")}
+                        className={cn("flex items-center justify-between gap-2 text-sm min-w-0", catObj && "cursor-pointer hover:bg-accent/50 rounded px-1 -mx-1 py-0.5")}
                         onClick={() => catObj && router.push(`/gastos?categoria=${catObj.id}`)}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           <div
-                            className="w-3 h-3 rounded-full"
+                            className="w-3 h-3 rounded-full shrink-0"
                             style={{ backgroundColor: COLORS[index % COLORS.length] }}
                           />
-                          <span className="truncate max-w-[120px]">{cat.name}</span>
+                          <span className="truncate">{cat.name}</span>
                         </div>
-                        <span className="font-medium">{formatCurrency(cat.value)}</span>
+                        <span className="font-medium shrink-0">{formatCurrencyCompact(cat.value)}</span>
                       </div>
                     )
                   })}
@@ -712,10 +774,10 @@ export default function DashboardPage() {
               </p>
             )}
           </CardContent>
-        </Card>
+        </Card>}
 
         {/* Evolución Mensual - Bar Chart Ingresos vs Gastos */}
-        <Card>
+        {isSectionVisible('ingresos_vs_gastos') && <Card>
           <CardHeader>
             <CardTitle className="text-lg">Ingresos vs Gastos</CardTitle>
             <CardDescription>
@@ -776,11 +838,12 @@ export default function DashboardPage() {
               </p>
             )}
           </CardContent>
-        </Card>
+        </Card>}
       </div>
+      )}
 
       {/* 7. Evolución Mensual - Tabla detallada */}
-      {balanceData && balanceData.meses.length > 0 && (
+      {balanceData && balanceData.meses.length > 0 && isSectionVisible('evolucion_tabla') && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Evolución Mensual</CardTitle>
@@ -806,17 +869,25 @@ export default function DashboardPage() {
                       <td className="py-2 pr-4 font-medium capitalize">
                         {format(new Date(`${mes.mes}-01`), 'MMM yyyy', { locale: es })}
                       </td>
-                      <td className="text-right py-2 px-4 text-green-600">
-                        {formatCurrencyCompact(mes.ingresos_ars)}
+                      <td className="text-right py-2 px-4">
+                        <div className="text-green-600">{formatCurrencyCompact(mes.ingresos_ars)}</div>
+                        {tcVenta && <div className="text-xs text-muted-foreground">{formatCurrencyCompact(mes.ingresos_ars / tcVenta, 'USD')}</div>}
                       </td>
-                      <td className="text-right py-2 px-4 text-red-600">
-                        {formatCurrencyCompact(mes.gastos_ars)}
+                      <td className="text-right py-2 px-4">
+                        <div className="text-red-600">{formatCurrencyCompact(mes.gastos_ars)}</div>
+                        {tcVenta && <div className="text-xs text-muted-foreground">{formatCurrencyCompact(mes.gastos_ars / tcVenta, 'USD')}</div>}
                       </td>
-                      <td className={`text-right py-2 px-4 font-medium ${mes.saldo_ars >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {mes.saldo_ars >= 0 ? '+' : ''}{formatCurrencyCompact(mes.saldo_ars)}
+                      <td className="text-right py-2 px-4 font-medium">
+                        <div className={mes.saldo_ars >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          {mes.saldo_ars >= 0 ? '+' : ''}{formatCurrencyCompact(mes.saldo_ars)}
+                        </div>
+                        {tcVenta && <div className="text-xs text-muted-foreground">{mes.saldo_ars >= 0 ? '+' : ''}{formatCurrencyCompact(mes.saldo_ars / tcVenta, 'USD')}</div>}
                       </td>
-                      <td className={`text-right py-2 pl-4 font-semibold ${mes.acumulado_ars >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                        {formatCurrencyCompact(mes.acumulado_ars)}
+                      <td className="text-right py-2 pl-4 font-semibold">
+                        <div className={mes.acumulado_ars >= 0 ? 'text-blue-600' : 'text-red-600'}>
+                          {formatCurrencyCompact(mes.acumulado_ars)}
+                        </div>
+                        {tcVenta && <div className="text-xs text-muted-foreground">{formatCurrencyCompact(mes.acumulado_ars / tcVenta, 'USD')}</div>}
                       </td>
                     </tr>
                   ))}
@@ -828,7 +899,7 @@ export default function DashboardPage() {
       )}
 
       {/* 8. Recent Activity - Gastos Recientes (full width) */}
-      <Card>
+      {isSectionVisible('gastos_recientes') && <Card>
         <CardHeader>
           <CardTitle className="text-lg">Gastos Recientes</CardTitle>
         </CardHeader>
@@ -860,7 +931,7 @@ export default function DashboardPage() {
             )}
           </div>
         </CardContent>
-      </Card>
+      </Card>}
     </div>
   )
 }
