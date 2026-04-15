@@ -1,10 +1,11 @@
 import { apiClient } from '../client'
-import type { StandardResponse, PreferenciasUsuario, ModulosDisponibles } from '@/types'
+import type { StandardResponse, PreferenciasUsuario, ModulosDisponibles, DashboardSection } from '@/types'
 
 export interface UpdatePreferenciasPayload {
   modulos_activos?: string[]
   tema?: 'light' | 'dark' | 'system'
   balance_inicial?: number
+  dashboard_sections?: DashboardSection[]
 }
 
 export interface ToggleModuloPayload {

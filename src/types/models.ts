@@ -270,12 +270,45 @@ export interface CuentaBancaria {
 }
 
 // Preferencias de Usuario
+export type DashboardSection =
+  | 'balance_acumulado'
+  | 'tasa_ahorro'
+  | 'evolucion_tabla'
+  | 'ingresos_vs_gastos'
+  | 'gastos_categoria'
+  | 'desglose_mes'
+  | 'gastos_recientes'
+  | 'proyeccion'
+
+export const DASHBOARD_SECTIONS_DEFAULT: DashboardSection[] = [
+  'balance_acumulado',
+  'tasa_ahorro',
+  'evolucion_tabla',
+  'ingresos_vs_gastos',
+  'gastos_categoria',
+  'desglose_mes',
+  'gastos_recientes',
+  'proyeccion',
+]
+
+export const DASHBOARD_SECTION_LABELS: Record<DashboardSection, string> = {
+  balance_acumulado: 'Balance Acumulado',
+  tasa_ahorro: 'Tasa de Ahorro',
+  evolucion_tabla: 'Evolución Mensual',
+  ingresos_vs_gastos: 'Ingresos vs Gastos',
+  gastos_categoria: 'Gastos por Categoría',
+  desglose_mes: 'Desglose del Mes',
+  gastos_recientes: 'Gastos Recientes',
+  proyeccion: 'Proyección',
+}
+
 export interface PreferenciasUsuario {
   id: number
   usuario_id: number
   modulos_activos: string[]
   tema: 'light' | 'dark' | 'system'
   balance_inicial: number
+  dashboard_sections: DashboardSection[]
   created_at?: string
   updated_at?: string
 }
