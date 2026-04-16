@@ -116,6 +116,7 @@ export interface MesBalance {
   gastos_usd: number
   saldo_usd: number
   acumulado_usd: number
+  tipo_cambio_mes: number | null
 }
 
 export interface BalanceEvolucionResponse {

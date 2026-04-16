@@ -857,6 +857,7 @@ export default function DashboardPage() {
                 <thead>
                   <tr className="border-b text-muted-foreground">
                     <th className="text-left py-2 pr-4 font-medium">Mes</th>
+                    <th className="text-right py-2 px-4 font-medium">TC</th>
                     <th className="text-right py-2 px-4 font-medium">Ingresos</th>
                     <th className="text-right py-2 px-4 font-medium">Gastos</th>
                     <th className="text-right py-2 px-4 font-medium">Saldo</th>
@@ -864,33 +865,39 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[...balanceData.meses].reverse().map((mes) => (
-                    <tr key={mes.mes} className="border-b last:border-0">
-                      <td className="py-2 pr-4 font-medium capitalize">
-                        {format(new Date(`${mes.mes}-01`), 'MMM yyyy', { locale: es })}
-                      </td>
-                      <td className="text-right py-2 px-4">
-                        <div className="text-green-600">{formatCurrencyCompact(mes.ingresos_ars)}</div>
-                        {tcVenta && <div className="text-xs text-muted-foreground">{formatCurrencyCompact(mes.ingresos_ars / tcVenta, 'USD')}</div>}
-                      </td>
-                      <td className="text-right py-2 px-4">
-                        <div className="text-red-600">{formatCurrencyCompact(mes.gastos_ars)}</div>
-                        {tcVenta && <div className="text-xs text-muted-foreground">{formatCurrencyCompact(mes.gastos_ars / tcVenta, 'USD')}</div>}
-                      </td>
-                      <td className="text-right py-2 px-4 font-medium">
-                        <div className={mes.saldo_ars >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          {mes.saldo_ars >= 0 ? '+' : ''}{formatCurrencyCompact(mes.saldo_ars)}
-                        </div>
-                        {tcVenta && <div className="text-xs text-muted-foreground">{mes.saldo_ars >= 0 ? '+' : ''}{formatCurrencyCompact(mes.saldo_ars / tcVenta, 'USD')}</div>}
-                      </td>
-                      <td className="text-right py-2 pl-4 font-semibold">
-                        <div className={mes.acumulado_ars >= 0 ? 'text-blue-600' : 'text-red-600'}>
-                          {formatCurrencyCompact(mes.acumulado_ars)}
-                        </div>
-                        {tcVenta && <div className="text-xs text-muted-foreground">{formatCurrencyCompact(mes.acumulado_ars / tcVenta, 'USD')}</div>}
-                      </td>
-                    </tr>
-                  ))}
+                  {[...balanceData.meses].reverse().map((mes) => {
+                    const tc = mes.tipo_cambio_mes
+                    return (
+                      <tr key={mes.mes} className="border-b last:border-0">
+                        <td className="py-2 pr-4 font-medium capitalize">
+                          {format(new Date(`${mes.mes}-01`), 'MMM yyyy', { locale: es })}
+                        </td>
+                        <td className="text-right py-2 px-4 text-muted-foreground">
+                          {tc ? `$${tc.toLocaleString('es-AR', { maximumFractionDigits: 0 })}` : '—'}
+                        </td>
+                        <td className="text-right py-2 px-4">
+                          <div className="text-green-600">{formatCurrencyCompact(mes.ingresos_ars)}</div>
+                          {tc && <div className="text-xs text-muted-foreground">{formatCurrencyCompact(mes.ingresos_ars / tc, 'USD')}</div>}
+                        </td>
+                        <td className="text-right py-2 px-4">
+                          <div className="text-red-600">{formatCurrencyCompact(mes.gastos_ars)}</div>
+                          {tc && <div className="text-xs text-muted-foreground">{formatCurrencyCompact(mes.gastos_ars / tc, 'USD')}</div>}
+                        </td>
+                        <td className="text-right py-2 px-4 font-medium">
+                          <div className={mes.saldo_ars >= 0 ? 'text-green-600' : 'text-red-600'}>
+                            {mes.saldo_ars >= 0 ? '+' : ''}{formatCurrencyCompact(mes.saldo_ars)}
+                          </div>
+                          {tc && <div className="text-xs text-muted-foreground">{mes.saldo_ars >= 0 ? '+' : ''}{formatCurrencyCompact(mes.saldo_ars / tc, 'USD')}</div>}
+                        </td>
+                        <td className="text-right py-2 pl-4 font-semibold">
+                          <div className={mes.acumulado_ars >= 0 ? 'text-blue-600' : 'text-red-600'}>
+                            {formatCurrencyCompact(mes.acumulado_ars)}
+                          </div>
+                          {tc && <div className="text-xs text-muted-foreground">{formatCurrencyCompact(mes.acumulado_ars / tc, 'USD')}</div>}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
