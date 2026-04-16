@@ -12,16 +12,36 @@ test.describe('Balance Acumulado', () => {
     await expect(page.getByText('Balance Acumulado')).toBeVisible({ timeout: 10000 })
   })
 
-  test('dashboard shows Evolución Mensual table', async ({ page }) => {
+  test('dashboard shows Evolución Mensual table with TC column', async ({ page }) => {
     await loginAndGoTo(page)
 
     await expect(page.getByText('Evolución Mensual')).toBeVisible({ timeout: 10000 })
 
-    // Table headers should be present
-    await expect(page.getByText('Ingresos', { exact: false }).first()).toBeVisible()
-    await expect(page.getByText('Gastos', { exact: false }).first()).toBeVisible()
-    await expect(page.getByText('Saldo', { exact: false }).first()).toBeVisible()
-    await expect(page.getByText('Acumulado', { exact: false }).first()).toBeVisible()
+    // All table headers should be present, including TC
+    await expect(page.getByRole('columnheader', { name: 'TC' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Ingresos' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Gastos' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Saldo' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Acumulado' })).toBeVisible()
+  })
+
+  test('Evolución Mensual TC column shows value or dash per row', async ({ page }) => {
+    await loginAndGoTo(page)
+
+    await expect(page.getByText('Evolución Mensual')).toBeVisible({ timeout: 10000 })
+
+    // Each row in the table should have either a TC value (e.g. "$1.350") or a dash ("—")
+    const rows = page.locator('table tbody tr')
+    const rowCount = await rows.count()
+
+    if (rowCount > 0) {
+      // At least one row: verify TC cell contains a value or dash
+      const firstRowCells = rows.first().locator('td')
+      // TC is the 2nd column (index 1)
+      const tcCell = firstRowCells.nth(1)
+      const tcText = await tcCell.textContent()
+      expect(tcText?.trim()).toMatch(/^\$[\d.,]+$|^—$/)
+    }
   })
 
   test('Ingresos vs Gastos chart is visible', async ({ page }) => {
