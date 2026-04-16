@@ -87,14 +87,27 @@ export function GastoRecurrenteForm({
 
   const montoActual = form.watch('monto')
   const monedaActual = form.watch('moneda_origen')
+  const frecuenciaIdActual = form.watch('frecuencia_gasto_id')
+
+  const frecuenciaSeleccionada = frecuencias.find(f => f.id === frecuenciaIdActual)
+  const frecuenciaNombre = frecuenciaSeleccionada?.nombre_frecuencia?.toLowerCase()
+  const esAnual = frecuenciaNombre === 'anual'
 
   if (catalogosLoading) {
     return <div className="text-center py-4">Cargando formulario...</div>
   }
 
+  function handleSubmit(data: GastoRecurrenteFormValues) {
+    if (esAnual && !data.mes_de_pago) {
+      form.setError('mes_de_pago', { message: 'El mes de pago es requerido para gastos anuales' })
+      return
+    }
+    onSubmit(data)
+  }
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <DescripcionField
           control={form.control}
           name="descripcion"
@@ -124,50 +137,49 @@ export function GastoRecurrenteForm({
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="mes_de_pago"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Mes de Pago (Opcional)</FormLabel>
-              <FormControl>
-                <SearchableSelect
-                  options={[
-                    { value: 'null', label: 'Todos los meses' },
-                    { value: '1', label: 'Enero' },
-                    { value: '2', label: 'Febrero' },
-                    { value: '3', label: 'Marzo' },
-                    { value: '4', label: 'Abril' },
-                    { value: '5', label: 'Mayo' },
-                    { value: '6', label: 'Junio' },
-                    { value: '7', label: 'Julio' },
-                    { value: '8', label: 'Agosto' },
-                    { value: '9', label: 'Septiembre' },
-                    { value: '10', label: 'Octubre' },
-                    { value: '11', label: 'Noviembre' },
-                    { value: '12', label: 'Diciembre' },
-                  ]}
-                  value={field.value?.toString() || 'null'}
-                  onValueChange={(value) =>
-                    field.onChange(value === 'null' ? null : parseInt(value))
-                  }
-                  placeholder="Todos los meses"
-                  searchPlaceholder="Buscar mes..."
-                />
-              </FormControl>
-              <FormDescription>
-                Para gastos anuales, especifica el mes
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <FrecuenciaField
           control={form.control}
           name="frecuencia_gasto_id"
           frecuencias={frecuencias}
         />
+
+        {esAnual && (
+          <FormField
+            control={form.control}
+            name="mes_de_pago"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Mes de Pago <span className="text-destructive">*</span></FormLabel>
+                <FormControl>
+                  <SearchableSelect
+                    options={[
+                      { value: '1', label: 'Enero' },
+                      { value: '2', label: 'Febrero' },
+                      { value: '3', label: 'Marzo' },
+                      { value: '4', label: 'Abril' },
+                      { value: '5', label: 'Mayo' },
+                      { value: '6', label: 'Junio' },
+                      { value: '7', label: 'Julio' },
+                      { value: '8', label: 'Agosto' },
+                      { value: '9', label: 'Septiembre' },
+                      { value: '10', label: 'Octubre' },
+                      { value: '11', label: 'Noviembre' },
+                      { value: '12', label: 'Diciembre' },
+                    ]}
+                    value={field.value?.toString() || ''}
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                    placeholder="Seleccionar mes"
+                    searchPlaceholder="Buscar mes..."
+                  />
+                </FormControl>
+                <FormDescription>
+                  Mes en que se genera este gasto cada año
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <CategoriaField
           control={form.control}

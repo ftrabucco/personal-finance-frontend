@@ -216,12 +216,22 @@ export function GastosRecurrentesTab() {
     return isSameMonth(new Date(ultimaFecha), new Date())
   }
 
+  function montoMensualEquivalente(gasto: GastoRecurrente, moneda: 'ars' | 'usd'): number {
+    const monto = moneda === 'ars' ? Number(gasto.monto_ars) || 0 : Number(gasto.monto_usd) || 0
+    const freq = gasto.frecuencia?.nombre_frecuencia?.toLowerCase()
+    if (freq === 'trimestral') return monto / 3
+    if (freq === 'semestral') return monto / 6
+    if (freq === 'anual') return monto / 12
+    if (freq === 'bimestral') return monto / 2
+    return monto // mensual, quincenal, semanal, diaria — se suman tal cual
+  }
+
   const totalARS = gastosActivos.reduce(
-    (sum, gasto) => sum + (Number(gasto.monto_ars) || 0),
+    (sum, gasto) => sum + montoMensualEquivalente(gasto, 'ars'),
     0
   )
   const totalUSD = gastosActivos.reduce(
-    (sum, gasto) => sum + (Number(gasto.monto_usd) || 0),
+    (sum, gasto) => sum + montoMensualEquivalente(gasto, 'usd'),
     0
   )
 
