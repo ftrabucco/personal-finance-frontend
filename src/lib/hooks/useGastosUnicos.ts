@@ -2,7 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { gastosApi } from '@/lib/api/endpoints/gastos'
 import { analytics } from '@/lib/analytics'
-import type { GastoUnico } from '@/types'
+import type { Gasto, GastoUnico, StandardResponse } from '@/types'
 
 const QUERY_KEY = 'gastos-unicos'
 
@@ -34,10 +34,12 @@ export function useCreateGastoUnico() {
 
   return useMutation({
     mutationFn: (gasto: Partial<GastoUnico>) => gastosApi.createGastoUnico(gasto),
-    onSuccess: (_, variables) => {
+    onSuccess: async (_, variables) => {
       analytics.gastoCreado(undefined, variables.monto)
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
-      queryClient.invalidateQueries({ queryKey: ['gastos'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+        queryClient.invalidateQueries({ queryKey: ['gastos'] }),
+      ])
     },
   })
 }
@@ -48,10 +50,12 @@ export function useUpdateGastoUnico() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<GastoUnico> }) =>
       gastosApi.updateGastoUnico(id, data),
-    onSuccess: () => {
+    onSuccess: async () => {
       analytics.gastoEditado()
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
-      queryClient.invalidateQueries({ queryKey: ['gastos'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+        queryClient.invalidateQueries({ queryKey: ['gastos'] }),
+      ])
     },
   })
 }
@@ -61,10 +65,30 @@ export function useDeleteGastoUnico() {
 
   return useMutation({
     mutationFn: (id: number) => gastosApi.deleteGastoUnico(id),
-    onSuccess: () => {
+    onSuccess: async (_, id) => {
       analytics.gastoEliminado()
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
-      queryClient.invalidateQueries({ queryKey: ['gastos'] })
+      queryClient.setQueriesData<StandardResponse<GastoUnico[]>>({ queryKey: [QUERY_KEY] }, (current) =>
+        removeItemFromResponse(current, id),
+      )
+      queryClient.setQueriesData<StandardResponse<Gasto[]>>({ queryKey: ['gastos'] }, (current) =>
+        removeItemFromResponse(current, id),
+      )
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+        queryClient.invalidateQueries({ queryKey: ['gastos'] }),
+      ])
     },
   })
+}
+
+function removeItemFromResponse<T extends { id: number }>(
+  response: StandardResponse<T[]> | undefined,
+  id: number,
+) {
+  if (!response?.data) return response
+
+  return {
+    ...response,
+    data: response.data.filter((item) => item.id !== id),
+  }
 }
