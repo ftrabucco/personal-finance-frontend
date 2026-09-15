@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth/authContext'
 import { authApi } from '@/lib/api/endpoints/auth'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,13 @@ export default function PerfilPage() {
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isChangingPassword, setIsChangingPassword] = useState(false)
+
+  useEffect(() => {
+    if (user) {
+      setNombre(user.nombre)
+      setEmail(user.email)
+    }
+  }, [user])
 
   // Actualizar perfil
   const handleUpdateProfile = async (e: React.FormEvent) => {
