@@ -9,6 +9,11 @@ export function useIngresosUnicos() {
   return useQuery({
     queryKey: [QUERY_KEY],
     queryFn: () => ingresosUnicosApi.getIngresosUnicos(),
+    // Backs the dashboard and el historial: ingresos can also be created by
+    // another tab/device, not just this component's own mutations. Without
+    // a refetch interval, the 5min global staleTime means those changes
+    // never appear here until something else remounts the query.
+    refetchInterval: 30_000,
   })
 }
 
