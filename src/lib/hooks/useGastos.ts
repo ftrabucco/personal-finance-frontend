@@ -15,6 +15,12 @@ export function useAllGastos() {
   return useQuery({
     queryKey: [QUERY_KEY, 'all'],
     queryFn: () => gastosApi.getAllGastos(),
+    // Backs the dashboard and el historial: gastos can also be created by
+    // the backend's automatic expense-generation scheduler or another
+    // tab/device, not just this component's own mutations. Without a
+    // refetch interval, the 5min global staleTime means those changes
+    // never appear here until something else remounts the query.
+    refetchInterval: 30_000,
   })
 }
 

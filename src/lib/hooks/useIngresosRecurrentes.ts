@@ -9,6 +9,11 @@ export function useIngresosRecurrentes() {
   return useQuery({
     queryKey: [QUERY_KEY],
     queryFn: () => ingresosRecurrentesApi.getIngresosRecurrentes(),
+    // Backs the dashboard: ingresos recurrentes activos can also change via
+    // another tab/device, not just this component's own mutations. Without
+    // a refetch interval, the 5min global staleTime means those changes
+    // never appear here until something else remounts the query.
+    refetchInterval: 30_000,
   })
 }
 
