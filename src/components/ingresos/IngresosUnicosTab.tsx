@@ -344,9 +344,17 @@ export function IngresosUnicosTab() {
             <div className="text-center py-8">Cargando ingresos...</div>
           ) : filteredIngresos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {hasActiveFilters || searchQuery
-                ? 'No hay ingresos que coincidan con los filtros seleccionados.'
-                : 'No hay ingresos registrados. Crea tu primer ingreso único.'}
+              {ingresos.length === 0 ? (
+                'No hay ingresos registrados. Crea tu primer ingreso único.'
+              ) : (
+                <>
+                  <p>No hay ingresos que coincidan con los filtros seleccionados.</p>
+                  <p className="text-xs mt-1">
+                    Tenés {ingresos.length} ingreso{ingresos.length !== 1 ? 's' : ''} en otros períodos o categorías —
+                    {' '}probá ampliar el rango de fechas o limpiar los filtros.
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <>
