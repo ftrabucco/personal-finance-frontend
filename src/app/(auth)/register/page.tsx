@@ -66,7 +66,7 @@ export default function RegisterPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
               {error && (
                 <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
                   {error}

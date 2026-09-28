@@ -326,9 +326,17 @@ export function GastosUnicosTab() {
             <div className="text-center py-8">Cargando gastos...</div>
           ) : filteredGastos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {hasActiveFilters
-                ? 'No hay gastos que coincidan con los filtros seleccionados.'
-                : 'No hay gastos registrados. Crea tu primer gasto unico.'}
+              {gastos.length === 0 ? (
+                'No hay gastos registrados. Crea tu primer gasto unico.'
+              ) : (
+                <>
+                  <p>No hay gastos que coincidan con los filtros seleccionados.</p>
+                  <p className="text-xs mt-1">
+                    Tenés {gastos.length} gasto{gastos.length !== 1 ? 's' : ''} en otros períodos o categorías —
+                    {' '}probá ampliar el rango de fechas o limpiar los filtros.
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <>

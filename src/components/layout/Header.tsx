@@ -101,7 +101,10 @@ export function Header({ onMenuClick }: HeaderProps) {
                 {isLoading || isUpdating ? (
                   <RefreshCw className="h-3 w-3 animate-spin" />
                 ) : (
-                  <DollarSign className="h-3 w-3" />
+                  <>
+                    <DollarSign className="h-3 w-3" />
+                    <RefreshCw className="h-2.5 w-2.5 opacity-50" />
+                  </>
                 )}
                 <span className="hidden sm:inline">
                   {tipoCambio

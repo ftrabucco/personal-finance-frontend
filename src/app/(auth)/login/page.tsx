@@ -69,7 +69,7 @@ function LoginForm() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
               {justRegistered && (
                 <div className="bg-green-50 text-green-700 text-sm p-3 rounded-md border border-green-200">
                   Cuenta creada exitosamente. Inicia sesion para continuar.

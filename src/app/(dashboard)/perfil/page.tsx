@@ -123,7 +123,7 @@ export default function PerfilPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleUpdateProfile} className="space-y-4">
+          <form onSubmit={handleUpdateProfile} className="space-y-4" noValidate>
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre</Label>
               <div className="relative">
@@ -184,7 +184,7 @@ export default function PerfilPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleChangePassword} className="space-y-4">
+          <form onSubmit={handleChangePassword} className="space-y-4" noValidate>
             <div className="space-y-2">
               <Label htmlFor="currentPassword">Contraseña Actual</Label>
               <Input
