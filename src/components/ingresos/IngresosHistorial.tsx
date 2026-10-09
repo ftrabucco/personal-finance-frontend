@@ -95,8 +95,23 @@ export function IngresosHistorial() {
     const currentMonth = now.getMonth()
     const currentYear = now.getFullYear()
 
+    // Backend now materializes recurring incomes into real ingresos_unico rows
+    // (one per occurrence, with that month's own exchange rate snapshot). Once
+    // a real row exists for a source this month, skip the synthetic "current
+    // month" placeholder below for it, or it shows up twice with two different
+    // amounts (the stale template total vs. the real generated one).
+    const sourcesGeneratedThisMonth = new Set(
+      (unicosResponse?.data || [])
+        .filter((i) => {
+          if (!i.ingreso_recurrente_id) return false
+          const d = parseISO(i.fecha.slice(0, 10))
+          return d.getMonth() === currentMonth && d.getFullYear() === currentYear
+        })
+        .map((i) => i.ingreso_recurrente_id as number)
+    )
+
     const recurrentes = (recurrentesResponse?.data || [])
-      .filter((i) => i.activo)
+      .filter((i) => i.activo && !sourcesGeneratedThisMonth.has(i.id))
       .map((i) => {
         // Use dia_de_pago to build a synthetic date for the current month
         const daysInMonth = getDaysInMonth(now)
