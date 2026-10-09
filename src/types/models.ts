@@ -227,6 +227,8 @@ export interface IngresoUnico {
   usuario_id: number
   created_at: string
   updated_at: string
+  // Non-null when this row was materialized from an IngresoRecurrente by the backend generator
+  ingreso_recurrente_id?: number | null
   // Relaciones
   fuenteIngreso?: FuenteIngreso
 }
