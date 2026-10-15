@@ -43,7 +43,6 @@ import { useCategorias } from '@/lib/hooks/useCatalogos'
 import { useProcesarTodosPendientes } from '@/lib/hooks/useProcesamiento'
 import { useSaludFinanciera, useProyeccion } from '@/lib/hooks/useAnalisis'
 import { useIngresosUnicos } from '@/lib/hooks/useIngresosUnicos'
-import { useIngresosRecurrentes } from '@/lib/hooks/useIngresosRecurrentes'
 import { usePreferencias, useUpdatePreferencias } from '@/lib/hooks/usePreferencias'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils'
@@ -75,7 +74,6 @@ export default function DashboardPage() {
   const { data: saludResponse } = useSaludFinanciera('mes')
   const { data: proyeccionResponse } = useProyeccion(1)
   const { data: ingresosUnicosResponse } = useIngresosUnicos()
-  const { data: ingresosRecurrentesResponse } = useIngresosRecurrentes()
   const { data: categoriasResponse } = useCategorias()
 
   // Dashboard personalization
@@ -101,7 +99,6 @@ export default function DashboardPage() {
   const categorias = categoriasResponse?.data || []
 
   const ingresosUnicos = ingresosUnicosResponse?.data || []
-  const ingresosRecurrentes = ingresosRecurrentesResponse?.data || []
   const gastos = gastosResponse?.data || []
 
   const handleProcesarPendientes = () => {
@@ -175,34 +172,15 @@ export default function DashboardPage() {
     0
   )
 
-  // Ingresos recurrentes activos del mes actual (verifica fecha_inicio y fecha_fin)
-  const ingresosRecurrentesActivos = useMemo(() =>
-    ingresosRecurrentes.filter((i) => {
-      if (!i.activo) return false
-      if (i.fecha_inicio) {
-        const fechaInicioStr = i.fecha_inicio.slice(0, 10)
-        if (fechaInicioStr > endCurrentStr) return false
-      }
-      if (i.fecha_fin) {
-        const fechaFinStr = i.fecha_fin.slice(0, 10)
-        if (fechaFinStr < startCurrentStr) return false
-      }
-      return true
-    }),
-    [ingresosRecurrentes, startCurrentStr, endCurrentStr]
-  )
-
-  const totalIngresosRecurrentesMensual = ingresosRecurrentesActivos.reduce(
-    (sum, i) => sum + parseFloat(String(i.monto_ars || 0)), 0
-  )
-
-  const totalIngresosRecurrentesMensualUSD = ingresosRecurrentesActivos.reduce(
-    (sum, i) => sum + parseFloat(String(i.monto_usd || 0)), 0
-  )
-
-  // Total ingresos del mes (únicos + recurrentes activos)
-  const totalIngresosDelMes = totalIngresosUnicosDelMes + totalIngresosRecurrentesMensual
-  const totalIngresosDelMesUSD = totalIngresosUnicosDelMesUSD + totalIngresosRecurrentesMensualUSD
+  // Total ingresos del mes. Recurring incomes materialize into real
+  // ingresos_unico rows (one per occurrence, see IngresoGeneratorService),
+  // which already flow into totalIngresosUnicosDelMes above — summing the
+  // IngresoRecurrente templates on top of that double-counts them (the
+  // template's monto_ars is also a stale snapshot from whenever it was
+  // created/last edited, not this month's actual rate). Matches
+  // /balance/evolucion, which stopped adding templates for the same reason.
+  const totalIngresosDelMes = totalIngresosUnicosDelMes
+  const totalIngresosDelMesUSD = totalIngresosUnicosDelMesUSD
 
   // Balance neto
   const balanceNeto = totalIngresosDelMes - totalGastosDelMes
@@ -254,6 +232,10 @@ export default function DashboardPage() {
         })
         .reduce((sum, g) => sum + parseFloat(g.monto_ars), 0)
 
+      // Recurring incomes already materialize into real ingresos_unico rows
+      // for every past month (see totalIngresosDelMes above for why summing
+      // the templates on top double-counts them) — ingresosUnicos alone is
+      // the correct total for each month here too.
       const totalIngresosU = ingresosUnicos
         .filter((ingreso) => {
           const fechaStr = ingreso.fecha.slice(0, 10)
@@ -261,25 +243,16 @@ export default function DashboardPage() {
         })
         .reduce((sum, ingreso) => sum + parseFloat(String(ingreso.monto_ars || 0)), 0)
 
-      const totalIngresosR = ingresosRecurrentes
-        .filter((rec) => {
-          if (!rec.activo) return false
-          if (rec.fecha_inicio && rec.fecha_inicio.slice(0, 10) > finStr) return false
-          if (rec.fecha_fin && rec.fecha_fin.slice(0, 10) < inicioStr) return false
-          return true
-        })
-        .reduce((sum, rec) => sum + parseFloat(String(rec.monto_ars || 0)), 0)
-
       meses.push({
         mes: format(mesDate, 'MMM', { locale: es }),
         gastos: totalGastos,
-        ingresos: totalIngresosU + totalIngresosR,
+        ingresos: totalIngresosU,
         dateFrom: inicioStr,
         dateTo: finStr,
       })
     }
     return meses
-  }, [gastos, ingresosUnicos, ingresosRecurrentes, startCurrentStr])
+  }, [gastos, ingresosUnicos, startCurrentStr])
 
   // Desglose de gastos del mes por tipo_origen (datos reales procesados)
   const gastosPorTipo = useMemo(() => {
